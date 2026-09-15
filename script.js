@@ -176,9 +176,10 @@ const campusLocations = {
     },
 
     "mech": {
-        name: "Mechanical Block",
-        category: "Academic",
-        type: "area",
+    name: "Mechanical Block",
+    category: "Academic",
+    type: "area",
+    customType: "mech-block",
         corners: [
             [16.543696585530828, 81.49596646866938],
             [16.54362217177738, 81.49628428392184],
@@ -193,9 +194,10 @@ const campusLocations = {
     },
 
     "it": {
-        name: "IT Block",
-        category: "Academic",
-        type: "area",
+    name: "IT Block",
+    category: "Academic",
+    type: "area",
+    customType: "it-block",
         corners: [
             [16.543242768970856, 81.49705861092663],
             [16.542965405989634, 81.49702411269952],
@@ -209,10 +211,11 @@ const campusLocations = {
     },
 
     "n-block": {
-        name: "N Block",
-        category: "Academic",
-        type: "area",
-        corners: [
+    name: "N Block",
+    category: "Academic",
+    type: "area",
+    customType: "n-block",    
+    corners: [
             [16.544091333689746, 81.49590861593775],
             [16.544088762521824, 81.49630424176621],
             [16.543795649154706, 81.4962961951392],
@@ -316,7 +319,7 @@ const campusLocations = {
     /* ---------------- SUB-LOCATIONS: TECHNOLOGICAL CENTRE ---------------- */
 
     "sbi-srkr": {
-        name: "SBI Bank (SRKR Branch)",
+    name: "SBI Bank (Chinna Amiram Branch)",
         category: "Campus Facilities",
         type: "point",
         latitude: 16.542559142258124,
@@ -1921,6 +1924,23 @@ const campusDetails = {
         category: "Administration",
         customType: "admin-block"
     },
+        "n-block": {
+        title: "N Block",
+        category: "Academic Block",
+        customType: "n-block"
+    },
+
+    "mech": {
+        title: "Mechanical Block",
+        category: "Academic Block",
+        customType: "mech-block"
+    },
+
+    "it": {
+        title: "IT Block",
+        category: "Academic Block",
+        customType: "it-block"
+    },
     "s-block": {
         title: "S Block",
         category: "Academic Block",
@@ -1930,15 +1950,11 @@ const campusDetails = {
             "🛗 Common Facilities": sBlockData.commonFacilities
         }
     },
-    "technological-centre": {
-        title: "Technological Centre (CSD & CSIT Block)",
-        category: "Academic Block",
-        sections: {
-            "💻 Departments": ["CSD", "CSIT"],
-            "📚 Classes": ["Class information will be added."],
-            "🧪 Labs": ["Lab information will be added."]
-        }
-    },
+   "technological-centre": {
+    title: "Technological Centre (CSD & CSIT Block)",
+    category: "Academic Block",
+    customType: "technological-centre"
+},
     "canteen": {
         title: "Cafeteria",
         category: "Food & Refreshments",
@@ -3822,67 +3838,1448 @@ function getLocationPosition(location) {
 
 
 /* =========================================================
-   21. BEST ACCESS POINT  (unchanged)
+   21. BEST ACCESS POINT
+   ---------------------------------------------------------
+   Choose the destination entrance using ACTUAL
+   surveyed-road routing distance.
 ========================================================= */
 
-function getBestAccessPoint(destinationId, startPosition) {
-    const accessPoints = hiddenAccessPoints[destinationId];
-    if (!accessPoints || accessPoints.length === 0) return null;
-    if (accessPoints.length === 1) return accessPoints[0];
-    let bestPoint = accessPoints[0];
-    let bestDistance = distanceBetween(startPosition, bestPoint);
-    accessPoints.forEach(point => {
-        const d = distanceBetween(startPosition, point);
-        if (d < bestDistance) { bestDistance = d; bestPoint = point; }
-    });
+function getBestAccessPoint(
+    destinationId,
+    startPosition
+) {
+
+    const accessPoints =
+        hiddenAccessPoints[
+            destinationId
+        ];
+
+    if (
+        !Array.isArray(accessPoints) ||
+        accessPoints.length === 0
+    ) {
+        return null;
+    }
+
+    if (accessPoints.length === 1) {
+        return accessPoints[0];
+    }
+
+    let bestPoint = null;
+    let shortestDistance = Infinity;
+
+    accessPoints.forEach(
+        point => {
+
+            const route =
+                findShortestRoadPath(
+                    startPosition,
+                    point
+                );
+
+            if (
+                route &&
+                Number.isFinite(
+                    route.distance
+                ) &&
+                route.distance <
+                    shortestDistance
+            ) {
+                shortestDistance =
+                    route.distance;
+
+                bestPoint = point;
+            }
+        }
+    );
+
+    /*
+     * If no access point could be connected
+     * to the road graph, fall back to the
+     * geographically closest entrance.
+     */
+    if (!bestPoint) {
+
+        bestPoint =
+            accessPoints.reduce(
+                (best, point) => {
+
+                    if (!best) {
+                        return point;
+                    }
+
+                    return distanceBetween(
+                        startPosition,
+                        point
+                    ) <
+                    distanceBetween(
+                        startPosition,
+                        best
+                    )
+                        ? point
+                        : best;
+                },
+                null
+            );
+    }
+
     return bestPoint;
 }
+
 
 
 /* =========================================================
    22. NEAREST JUNCTION  (unchanged)
 ========================================================= */
 
-function findNearestJunction(position) {
-    let nearestId = null;
-    let nearestDistance = Infinity;
-    Object.entries(campusJunctions).forEach(([id, junction]) => {
-        const d = distanceBetween(position, junction);
-        if (d < nearestDistance) { nearestId = id; nearestDistance = d; }
-    });
-    return { id: nearestId, distance: nearestDistance };
+/* =========================================================
+   22. REAL SRKR ROAD NETWORK
+   ---------------------------------------------------------
+   Routing is based on surveyed campus road coordinates.
+
+   IMPORTANT:
+   - No artificial campus junctions are used.
+   - GPS is projected onto the nearest road.
+   - Destination is projected onto the nearest road.
+   - Road intersections are detected automatically.
+   - Routes remain on the road network.
+========================================================= */
+
+const campusRoads = {
+    mainRoad: [
+        [16.54272752704966, 81.49575864594246],
+        [16.54582476339937, 81.49594851992335]
+    ],
+
+    northSouthRoad: [
+        [16.545413815869036, 81.49592189268544],
+        [16.545421473284435, 81.49712011839091]
+    ],
+
+    eastRoad: [
+        [16.545421473284435, 81.49712011839091],
+        [16.542350825275655, 81.49712810656438]
+    ],
+
+    westConnector: [
+        [16.542976189799145, 81.49579940739096],
+        [16.54276688434856, 81.49713076928592]
+    ],
+
+    centralConnector: [
+        [16.543678127162245, 81.4971254438403],
+        [16.543734282040962, 81.49581272101106]
+    ],
+
+    upperConnector: [
+        [16.544112050804465, 81.49713076928715],
+        [16.544178415509112, 81.495852661868]
+    ],
+
+    busRoad: [
+        [16.545217275429607, 81.49591124178917],
+        [16.545339794164434, 81.49525887446065]
+    ],
+
+    lowerInternalRoad: [
+        [16.543304703850442, 81.49626721386635],
+        [16.54321029196916, 81.49672718913916],
+        [16.54282538151895, 81.49664493473763]
+    ],
+
+    lowerWestRoad: [
+        [16.543304703850442, 81.49626721386635],
+        [16.54290526865722, 81.49620552306577]
+    ],
+
+    westSideRoad: [
+        [16.54304825024349, 81.49578753663002],
+        [16.543077195604667, 81.49544029108986]
+    ]
+};
+
+
+/* =========================================================
+   REAL ROAD ROUTING CONSTANTS
+========================================================= */
+
+const ROAD_CONNECTION_TOLERANCE_METERS = 28;
+const ROAD_NODE_MERGE_TOLERANCE_METERS = 3;
+
+const ROAD_NODE_PREFIX = "ROAD_NODE_";
+
+
+/* =========================================================
+   ROAD GEOMETRY HELPERS
+========================================================= */
+
+function clampRoadFraction(value) {
+    return Math.max(
+        0,
+        Math.min(1, value)
+    );
+}
+
+
+function projectPointOntoRoadSegment(
+    point,
+    segmentStart,
+    segmentEnd
+) {
+
+    const referenceLatitude =
+        point[0];
+
+    const p =
+        navigationPointToXY(
+            point,
+            referenceLatitude
+        );
+
+    const a =
+        navigationPointToXY(
+            segmentStart,
+            referenceLatitude
+        );
+
+    const b =
+        navigationPointToXY(
+            segmentEnd,
+            referenceLatitude
+        );
+
+    const dx =
+        b.x - a.x;
+
+    const dy =
+        b.y - a.y;
+
+    const lengthSquared =
+        dx * dx +
+        dy * dy;
+
+    if (
+        lengthSquared <=
+        0.000001
+    ) {
+
+        return {
+            point: [
+                segmentStart[0],
+                segmentStart[1]
+            ],
+            distance:
+                distanceBetween(
+                    point,
+                    segmentStart
+                ),
+            fraction: 0
+        };
+    }
+
+    let fraction =
+        (
+            (p.x - a.x) * dx +
+            (p.y - a.y) * dy
+        ) /
+        lengthSquared;
+
+    fraction =
+        clampRoadFraction(
+            fraction
+        );
+
+    const projectedX =
+        a.x +
+        fraction * dx;
+
+    const projectedY =
+        a.y +
+        fraction * dy;
+
+    const projectedLat =
+        segmentStart[0] +
+        fraction *
+        (
+            segmentEnd[0] -
+            segmentStart[0]
+        );
+
+    const projectedLng =
+        segmentStart[1] +
+        fraction *
+        (
+            segmentEnd[1] -
+            segmentStart[1]
+        );
+
+    const distance =
+        Math.sqrt(
+            (
+                p.x -
+                projectedX
+            ) ** 2 +
+            (
+                p.y -
+                projectedY
+            ) ** 2
+        );
+
+    return {
+        point: [
+            projectedLat,
+            projectedLng
+        ],
+        distance,
+        fraction
+    };
 }
 
 
 /* =========================================================
-   23. DIJKSTRA  (unchanged)
+   FIND NEAREST REAL ROAD
 ========================================================= */
 
-function findShortestPath(startId, endId) {
-    const distances = {}, previous = {}, visited = new Set();
-    Object.keys(campusJunctions).forEach(id => { distances[id] = Infinity; previous[id] = null; });
-    distances[startId] = 0;
+function findNearestRoad(
+    position
+) {
 
-    while (visited.size < Object.keys(campusJunctions).length) {
-        let currentId = null, smallestDistance = Infinity;
-        Object.keys(campusJunctions).forEach(id => {
-            if (!visited.has(id) && distances[id] < smallestDistance) { currentId = id; smallestDistance = distances[id]; }
-        });
-        if (currentId === null || currentId === endId) break;
-        visited.add(currentId);
-        const neighbors = campusConnections[currentId] || [];
-        neighbors.forEach(neighborId => {
-            const edgeDistance = distanceBetween(campusJunctions[currentId], campusJunctions[neighborId]);
-            const candidate = distances[currentId] + edgeDistance;
-            if (candidate < distances[neighborId]) { distances[neighborId] = candidate; previous[neighborId] = currentId; }
-        });
+    if (
+        !position ||
+        !Array.isArray(position)
+    ) {
+        return null;
     }
 
-    if (distances[endId] === Infinity) return null;
+    let best = null;
+
+    Object.entries(
+        campusRoads
+    ).forEach(
+        ([roadId, road]) => {
+
+            if (
+                !Array.isArray(road) ||
+                road.length < 2
+            ) {
+                return;
+            }
+
+            for (
+                let i = 1;
+                i < road.length;
+                i++
+            ) {
+
+                const segmentStart =
+                    road[i - 1];
+
+                const segmentEnd =
+                    road[i];
+
+                const projection =
+                    projectPointOntoRoadSegment(
+                        position,
+                        segmentStart,
+                        segmentEnd
+                    );
+
+                if (
+                    !projection
+                ) {
+                    continue;
+                }
+
+                if (
+                    !best ||
+                    projection.distance <
+                    best.distance
+                ) {
+
+                    best = {
+                        roadId,
+                        segmentIndex:
+                            i - 1,
+                        fraction:
+                            projection.fraction,
+                        point:
+                            projection.point,
+                        distance:
+                            projection.distance
+                    };
+                }
+            }
+        }
+    );
+
+    return best;
+}
+
+
+/* =========================================================
+   SEGMENT INTERSECTION
+========================================================= */
+/* =========================================================
+   ROAD / NAVIGATION COORDINATE PROJECTION
+   ---------------------------------------------------------
+   Converts latitude/longitude into a local metre-based
+   coordinate system for campus-scale geometry calculations.
+========================================================= */
+
+function navigationPointToXY(
+    point,
+    referenceLatitude
+) {
+
+    const METERS_PER_DEGREE_LAT =
+        111320;
+
+    const METERS_PER_DEGREE_LNG =
+        111320 *
+        Math.cos(
+            referenceLatitude *
+            Math.PI /
+            180
+        );
+
+    return {
+        x:
+            point[1] *
+            METERS_PER_DEGREE_LNG,
+
+        y:
+            point[0] *
+            METERS_PER_DEGREE_LAT
+    };
+}
+function findRoadSegmentIntersection(
+    a,
+    b,
+    c,
+    d
+) {
+
+    const referenceLatitude =
+        (
+            a[0] +
+            b[0] +
+            c[0] +
+            d[0]
+        ) / 4;
+
+    const A =
+        navigationPointToXY(
+            a,
+            referenceLatitude
+        );
+
+    const B =
+        navigationPointToXY(
+            b,
+            referenceLatitude
+        );
+
+    const C =
+        navigationPointToXY(
+            c,
+            referenceLatitude
+        );
+
+    const D =
+        navigationPointToXY(
+            d,
+            referenceLatitude
+        );
+
+    const denominator =
+        (
+            A.x - B.x
+        ) *
+        (
+            C.y - D.y
+        ) -
+        (
+            A.y - B.y
+        ) *
+        (
+            C.x - D.x
+        );
+
+    if (
+        Math.abs(
+            denominator
+        ) < 0.000001
+    ) {
+        return null;
+    }
+
+    const t =
+        (
+            (
+                A.x - C.x
+            ) *
+            (
+                C.y - D.y
+            ) -
+            (
+                A.y - C.y
+            ) *
+            (
+                C.x - D.x
+            )
+        ) /
+        denominator;
+
+    const u =
+        -(
+            (
+                A.x - B.x
+            ) *
+            (
+                A.y - C.y
+            ) -
+            (
+                A.y - B.y
+            ) *
+            (
+                A.x - C.x
+            )
+        ) /
+        denominator;
+
+    if (
+        t < -0.000001 ||
+        t > 1.000001 ||
+        u < -0.000001 ||
+        u > 1.000001
+    ) {
+        return null;
+    }
+
+    return [
+        a[0] +
+            t *
+            (
+                b[0] -
+                a[0]
+            ),
+
+        a[1] +
+            t *
+            (
+                b[1] -
+                a[1]
+            )
+    ];
+}
+
+
+/* =========================================================
+   BUILD REAL ROAD GRAPH
+========================================================= */
+
+function buildCampusRoadGraph() {
+
+    const nodes = [];
+    const edges = [];
+
+    function addNode(
+    point,
+    roadId,
+    segmentIndex,
+    fraction
+) {
+
+    /*
+     * Reuse an existing node only when:
+     *
+     * 1. It is very close to this point.
+     * 2. It already belongs to the SAME surveyed road.
+     *
+     * Different roads are allowed to share a node only
+     * through the explicit intersection-detection logic below.
+     */
+    const existing =
+        nodes.find(node => {
+
+            const nearby =
+                distanceBetween(
+                    node.point,
+                    point
+                ) <= 3;
+
+            if (!nearby) {
+                return false;
+            }
+
+            return Array.isArray(node.roadRefs) &&
+                node.roadRefs.some(
+                    ref =>
+                        ref.roadId === roadId
+                );
+        });
+
+    if (existing) {
+
+        const alreadyReferenced =
+            existing.roadRefs.some(
+                ref =>
+                    ref.roadId === roadId &&
+                    ref.segmentIndex === segmentIndex
+            );
+
+        if (!alreadyReferenced) {
+            existing.roadRefs.push({
+                roadId,
+                segmentIndex,
+                fraction
+            });
+        }
+
+        return existing;
+    }
+
+    const node = {
+        id:
+            ROAD_NODE_PREFIX +
+            nodes.length,
+
+        point: [
+            point[0],
+            point[1]
+        ],
+
+        roadRefs: [{
+            roadId,
+            segmentIndex,
+            fraction
+        }]
+    };
+
+    nodes.push(node);
+
+    return node;
+}
+
+
+
+
+    /*
+     * Start with every surveyed road
+     * vertex.
+     */
+
+    Object.entries(
+        campusRoads
+    ).forEach(
+        ([roadId, road]) => {
+
+            for (
+                let i = 0;
+                i < road.length;
+                i++
+            ) {
+
+                const fraction =
+                    road.length === 1
+                        ? 0
+                        : i /
+                          (
+                              road.length -
+                              1
+                          );
+
+                addNode(
+                    road[i],
+                    roadId,
+                    Math.max(
+                        0,
+                        i - 1
+                    ),
+                    fraction
+                );
+            }
+        }
+    );
+
+
+    /*
+     * Add actual intersections between
+     * surveyed road segments.
+     */
+
+    const roadEntries =
+        Object.entries(
+            campusRoads
+        );
+
+    roadEntries.forEach(
+        (
+            [roadAId, roadA],
+            indexA
+        ) => {
+
+            for (
+                let i = 1;
+                i < roadA.length;
+                i++
+            ) {
+
+                const a =
+                    roadA[i - 1];
+
+                const b =
+                    roadA[i];
+
+                roadEntries.forEach(
+                    (
+                        [roadBId, roadB],
+                        indexB
+                    ) => {
+
+                        if (
+                            indexB <
+                            indexA
+                        ) {
+                            return;
+                        }
+
+                        const startSegment =
+                            indexA === indexB
+                                ? i
+                                : 1;
+
+                        for (
+                            let j =
+                                startSegment;
+                            j <
+                            roadB.length;
+                            j++
+                        ) {
+
+                            if (
+                                indexA ===
+                                    indexB &&
+                                Math.abs(
+                                    i - j
+                                ) <= 1
+                            ) {
+                                continue;
+                            }
+
+                            const c =
+                                roadB[j - 1];
+
+                            const d =
+                                roadB[j];
+
+                            const intersection =
+                                findRoadSegmentIntersection(
+                                    a,
+                                    b,
+                                    c,
+                                    d
+                                );
+
+                            if (
+                                !intersection
+                            ) {
+                                continue;
+                            }
+
+                            const roadAFraction =
+                                projectPointOntoRoadSegment(
+                                    intersection,
+                                    a,
+                                    b
+                                ).fraction;
+
+                            const roadBFraction =
+                                projectPointOntoRoadSegment(
+                                    intersection,
+                                    c,
+                                    d
+                                ).fraction;
+
+                            addNode(
+                                intersection,
+                                roadAId,
+                                i - 1,
+                                roadAFraction
+                            );
+
+                            addNode(
+                                intersection,
+                                roadBId,
+                                j - 1,
+                                roadBFraction
+                            );
+                        }
+                    }
+                );
+            }
+        }
+    );
+
+
+    /*
+     * Connect consecutive points along
+     * each physical road.
+     */
+
+    Object.entries(
+        campusRoads
+    ).forEach(
+        ([roadId, road]) => {
+
+            const roadNodes =
+                nodes
+                    .filter(
+                        node =>
+                            node.roadRefs.some(
+                                ref =>
+                                    ref.roadId ===
+                                    roadId
+                            )
+                    )
+                    .map(
+                        node => {
+
+                            const ref =
+                                node.roadRefs.find(
+                                    item =>
+                                        item.roadId ===
+                                        roadId
+                                );
+
+                            return {
+                                node,
+                                fraction:
+                                    ref.fraction
+                            };
+                        }
+                    )
+                    .sort(
+                        (
+                            a,
+                            b
+                        ) =>
+                            a.fraction -
+                            b.fraction
+                    );
+
+
+            for (
+                let i = 1;
+                i < roadNodes.length;
+                i++
+            ) {
+
+                const from =
+                    roadNodes[i - 1].node;
+
+                const to =
+                    roadNodes[i].node;
+
+                if (
+                    from.id ===
+                    to.id
+                ) {
+                    continue;
+                }
+
+                const weight =
+                    distanceBetween(
+                        from.point,
+                        to.point
+                    );
+
+                /*
+ * Every physical campus road is traversable
+ * in both directions.
+ *
+ * This is essential for pedestrian navigation:
+ * the direction in which the surveyed coordinates
+ * were entered must NOT restrict routing.
+ */
+
+edges.push({
+    from: from.id,
+    to: to.id,
+    weight
+});
+
+edges.push({
+    from: to.id,
+    to: from.id,
+    weight
+});
+            }
+        }
+    );
+
+
+    return {
+        nodes,
+        edges
+    };
+}
+
+
+let campusRoadGraph =
+    buildCampusRoadGraph();
+
+
+/* =========================================================
+   REFRESH ROAD GRAPH
+========================================================= */
+
+function refreshCampusRoadGraph() {
+
+    campusRoadGraph =
+        buildCampusRoadGraph();
+
+    return campusRoadGraph;
+}
+
+
+/* =========================================================
+   CONNECT A TEMPORARY POINT TO THE
+   REAL ROAD GRAPH
+========================================================= */
+
+/* =========================================================
+   CONNECT A TEMPORARY POINT TO THE
+   EXACT SURVEYED ROAD SEGMENT
+   ---------------------------------------------------------
+   The point is projected onto the nearest surveyed road.
+   It is then connected only to the road nodes that
+   bracket that exact projection.
+   
+   This prevents artificial diagonal "spurs" across
+   campus areas/buildings.
+========================================================= */
+
+function connectPointToRoadGraph(
+    point,
+    graph,
+    label
+) {
+    if (
+        !Array.isArray(point) ||
+        point.length !== 2
+    ) {
+        return null;
+    }
+
+    const nearest = findNearestRoad(point);
+
+    if (!nearest) {
+        return null;
+    }
+
+    const temporaryId =
+        `${label}_ROAD_POINT`;
+
+    const nodes =
+        graph.nodes.map(node => ({
+            ...node,
+            point: [
+                node.point[0],
+                node.point[1]
+            ],
+            roadRefs:
+                Array.isArray(node.roadRefs)
+                    ? [...node.roadRefs]
+                    : []
+        }));
+
+    const edges =
+        graph.edges.map(edge => ({
+            ...edge
+        }));
+
+
+    /*
+     * Add the projected point as a temporary
+     * routing node.
+     */
+    const temporaryNode = {
+        id: temporaryId,
+
+        point: [
+            nearest.point[0],
+            nearest.point[1]
+        ],
+
+        roadRefs: [
+            {
+                roadId: nearest.roadId,
+
+                segmentIndex:
+                    nearest.segmentIndex,
+
+                fraction:
+                    nearest.fraction
+            }
+        ]
+    };
+
+    nodes.push(temporaryNode);
+
+
+    /*
+     * Find nodes belonging to the exact same
+     * surveyed road.
+     */
+    const sameRoadNodes =
+        nodes
+            .filter(node =>
+                node.id !== temporaryId &&
+                Array.isArray(node.roadRefs) &&
+                node.roadRefs.some(
+                    ref =>
+                        ref.roadId ===
+                        nearest.roadId
+                )
+            )
+            .map(node => {
+
+                const ref =
+                    node.roadRefs.find(
+                        item =>
+                            item.roadId ===
+                            nearest.roadId
+                    );
+
+                return {
+                    node,
+                    fraction:
+                        Number.isFinite(
+                            ref?.fraction
+                        )
+                            ? ref.fraction
+                            : 0
+                };
+            })
+            .sort(
+                (a, b) =>
+                    a.fraction -
+                    b.fraction
+            );
+
+
+    /*
+     * Find the two road nodes that bracket
+     * the exact projected position.
+     */
+    let previousNode = null;
+    let nextNode = null;
+
+    for (
+        let i = 0;
+        i < sameRoadNodes.length;
+        i++
+    ) {
+        const candidate =
+            sameRoadNodes[i];
+
+        if (
+            candidate.fraction <=
+            nearest.fraction
+        ) {
+            previousNode =
+                candidate;
+        }
+
+        if (
+            candidate.fraction >=
+            nearest.fraction
+        ) {
+            nextNode =
+                candidate;
+
+            break;
+        }
+    }
+
+
+    /*
+     * If the projection lands exactly on an
+     * existing graph node, connect directly to it.
+     */
+    if (
+        previousNode &&
+        nextNode &&
+        previousNode.node.id ===
+            nextNode.node.id
+    ) {
+
+        const weight =
+            distanceBetween(
+                temporaryNode.point,
+                previousNode.node.point
+            );
+
+        edges.push({
+            from:
+                temporaryId,
+
+            to:
+                previousNode.node.id,
+
+            weight
+        });
+
+        edges.push({
+            from:
+                previousNode.node.id,
+
+            to:
+                temporaryId,
+
+            weight
+        });
+
+    } else {
+
+        /*
+         * Connect only to the two nodes that
+         * actually surround the projection.
+         */
+        const bracketNodes =
+            [];
+
+        if (previousNode) {
+            bracketNodes.push(
+                previousNode.node
+            );
+        }
+
+        if (
+            nextNode &&
+            (
+                !previousNode ||
+                nextNode.node.id !==
+                    previousNode.node.id
+            )
+        ) {
+            bracketNodes.push(
+                nextNode.node
+            );
+        }
+
+
+        bracketNodes.forEach(
+            node => {
+
+                const weight =
+                    distanceBetween(
+                        temporaryNode.point,
+                        node.point
+                    );
+
+                edges.push({
+                    from:
+                        temporaryId,
+
+                    to:
+                        node.id,
+
+                    weight
+                });
+
+                edges.push({
+                    from:
+                        node.id,
+
+                    to:
+                        temporaryId,
+
+                    weight
+                });
+            }
+        );
+    }
+
+
+    return {
+        id:
+            temporaryId,
+
+        point:
+            temporaryNode.point,
+
+        nearestRoad:
+            nearest,
+
+        nodes,
+
+        edges
+    };
+}
+
+
+/* =========================================================
+   REAL ROAD SHORTEST PATH
+========================================================= */
+
+function findShortestRoadPath(
+    startPosition,
+    destinationPosition
+) {
+
+    if (
+        !startPosition ||
+        !destinationPosition
+    ) {
+        return null;
+    }
+
+    const graph = {
+        nodes:
+            campusRoadGraph.nodes.map(
+                node => ({
+                    ...node,
+                    point: [
+                        node.point[0],
+                        node.point[1]
+                    ]
+                })
+            ),
+
+        edges:
+            campusRoadGraph.edges.map(
+                edge => ({
+                    ...edge
+                })
+            )
+    };
+
+
+    const start =
+        connectPointToRoadGraph(
+            startPosition,
+            graph,
+            "START"
+        );
+
+    if (
+        !start
+    ) {
+        return null;
+    }
+
+
+    graph.nodes =
+        start.nodes;
+
+
+    const destination =
+        connectPointToRoadGraph(
+            destinationPosition,
+            graph,
+            "DESTINATION"
+        );
+
+    if (
+        !destination
+    ) {
+        return null;
+    }
+
+    graph.nodes =
+        destination.nodes;
+
+
+    const distances = {};
+    const previous = {};
+    const visited = new Set();
+
+
+    graph.nodes.forEach(
+        node => {
+
+            distances[node.id] =
+                Infinity;
+
+            previous[node.id] =
+                null;
+        }
+    );
+
+
+    distances[start.id] =
+        0;
+
+
+    while (
+        visited.size <
+        graph.nodes.length
+    ) {
+
+        let currentId =
+            null;
+
+        let bestDistance =
+            Infinity;
+
+
+        graph.nodes.forEach(
+            node => {
+
+                if (
+                    visited.has(
+                        node.id
+                    )
+                ) {
+                    return;
+                }
+
+                if (
+                    distances[
+                        node.id
+                    ] <
+                    bestDistance
+                ) {
+
+                    bestDistance =
+                        distances[
+                            node.id
+                        ];
+
+                    currentId =
+                        node.id;
+                }
+            }
+        );
+
+
+        if (
+            currentId === null
+        ) {
+            break;
+        }
+
+
+        if (
+            currentId ===
+            destination.id
+        ) {
+            break;
+        }
+
+
+        visited.add(
+            currentId
+        );
+
+
+        graph.edges
+            .filter(
+                edge =>
+                    edge.from ===
+                    currentId
+            )
+            .forEach(
+                edge => {
+
+                    const candidate =
+                        distances[
+                            currentId
+                        ] +
+                        edge.weight;
+
+                    if (
+                        candidate <
+                        distances[
+                            edge.to
+                        ]
+                    ) {
+
+                        distances[
+                            edge.to
+                        ] =
+                            candidate;
+
+                        previous[
+                            edge.to
+                        ] =
+                            currentId;
+                    }
+                }
+            );
+    }
+
+
+    if (
+        !Number.isFinite(
+            distances[
+                destination.id
+            ]
+        )
+    ) {
+        return null;
+    }
+
+
+    const nodeMap =
+        new Map(
+            graph.nodes.map(
+                node => [
+                    node.id,
+                    node
+                ]
+            )
+        );
+
+
     const path = [];
-    let currentId = endId;
-    while (currentId !== null) { path.unshift(campusJunctions[currentId]); currentId = previous[currentId]; }
-    return { path, distance: distances[endId] };
+
+    let currentId =
+        destination.id;
+
+
+    while (
+        currentId !== null
+    ) {
+
+        const node =
+            nodeMap.get(
+                currentId
+            );
+
+        if (
+            !node
+        ) {
+            break;
+        }
+
+        path.unshift(
+            node.point
+        );
+
+        currentId =
+            previous[
+                currentId
+            ];
+    }
+
+
+    return {
+        path,
+
+        distance:
+            distances[
+                destination.id
+            ],
+
+        startRoad:
+            start.nearestRoad,
+
+        destinationRoad:
+            destination.nearestRoad
+    };
 }
 
 /* =========================================================
@@ -4332,39 +5729,14 @@ function getTurnType(
 }
 
 
-function getJunctionIdFromPosition(
-    position
-) {
-
-    let nearestId = null;
-    let nearestDistance = Infinity;
-
-    Object.entries(
-        campusJunctions
-    ).forEach(
-        ([id, junction]) => {
-
-            const distance =
-                distanceBetween(
-                    position,
-                    junction
-                );
-
-            if (
-                distance <
-                nearestDistance
-            ) {
-
-                nearestDistance =
-                    distance;
-
-                nearestId =
-                    id;
-            }
-        }
-    );
-
-    return nearestId;
+function getJunctionIdFromPosition() {
+    /*
+     * Junction routing has been removed.
+     *
+     * Kept as a compatibility stub because older
+     * navigation code may still reference this name.
+     */
+    return null;
 }
 
 
@@ -4375,11 +5747,11 @@ function buildNavigationInstructions(
 
     const instructions = [];
 
+
     if (
         !routePath ||
         routePath.length < 2
     ) {
-
         return instructions;
     }
 
@@ -4389,121 +5761,141 @@ function buildNavigationInstructions(
             destinationId
         ];
 
-    if (!destination) {
+
+    if (
+        !destination
+    ) {
         return instructions;
     }
 
 
     /*
-     * Identify which route coordinates are
-     * verified junctions.
+     * First instruction:
+     * head toward the real road.
      */
 
-    const junctionRoute = [];
-
-    routePath.forEach(
-        point => {
-
-            const junctionId =
-                getJunctionIdFromPosition(
-                    point
-                );
-
-            if (!junctionId) {
-                return;
-            }
-
-            const junction =
-                campusJunctions[
-                    junctionId
-                ];
-
-            if (
-                distanceBetween(
-                    point,
-                    junction
-                ) <= 3
-            ) {
-
-                const alreadyAdded =
-                    junctionRoute.some(
-                        item =>
-                            item.id ===
-                            junctionId
-                    );
-
-                if (!alreadyAdded) {
-
-                    junctionRoute.push({
-                        id: junctionId,
-                        position: junction
-                    });
-                }
-            }
-        }
-    );
+    const firstRoadPoint =
+        routePath[1];
 
 
-    /*
-     * Initial instruction.
-     */
-
-    if (
-        junctionRoute.length > 0
-    ) {
-
-        const firstJunction =
-            junctionRoute[0];
-
-        const distance =
+    instructions.push({
+        type: "start",
+        icon: "🧭",
+        text: "Follow the campus road",
+        target: firstRoadPoint,
+        targetId: null,
+        distance:
             distanceBetween(
-                currentUserPosition,
-                firstJunction.position
-            );
-
-        instructions.push({
-            type: "start",
-            icon: "🧭",
-            text: "Head toward the route",
-            target: firstJunction.position,
-            targetId: firstJunction.id,
-            distance: distance
-        });
-    }
+                routePath[0],
+                firstRoadPoint
+            )
+    });
 
 
     /*
-     * Generate instructions for every
-     * junction transition.
+     * Detect meaningful turns from the
+     * actual road polyline.
      */
+
+    let lastBearing =
+        null;
+
 
     for (
         let i = 1;
-        i < junctionRoute.length - 1;
+        i <
+        routePath.length - 1;
         i++
     ) {
 
         const previous =
-            junctionRoute[i - 1];
+            routePath[
+                i - 1
+            ];
 
         const current =
-            junctionRoute[i];
+            routePath[
+                i
+            ];
 
         const next =
-            junctionRoute[i + 1];
+            routePath[
+                i + 1
+            ];
 
 
         const incomingBearing =
             calculateBearing(
-                previous.position,
-                current.position
+                previous,
+                current
             );
+
 
         const outgoingBearing =
             calculateBearing(
-                current.position,
-                next.position
+                current,
+                next
             );
+
+
+        /*
+         * Ignore tiny bearing changes.
+         * This prevents every road coordinate
+         * from becoming a "turn".
+         */
+
+        let delta =
+            Math.abs(
+                outgoingBearing -
+                incomingBearing
+            );
+
+
+        if (
+            delta > 180
+        ) {
+            delta =
+                360 -
+                delta;
+        }
+
+
+        if (
+            delta < 25
+        ) {
+            continue;
+        }
+
+
+        /*
+         * Avoid duplicate instructions caused
+         * by multiple closely spaced road points.
+         */
+
+        if (
+            lastBearing !== null
+        ) {
+
+            let repeatedDelta =
+                Math.abs(
+                    outgoingBearing -
+                    lastBearing
+                );
+
+            if (
+                repeatedDelta > 180
+            ) {
+                repeatedDelta =
+                    360 -
+                    repeatedDelta;
+            }
+
+            if (
+                repeatedDelta < 15
+            ) {
+                continue;
+            }
+        }
 
 
         const turn =
@@ -4514,67 +5906,61 @@ function buildNavigationInstructions(
 
 
         instructions.push({
+            type:
+                turn.type,
 
-            type: turn.type,
+            icon:
+                turn.icon,
 
-            icon: turn.icon,
+            text:
+                turn.text,
 
-            text: turn.text,
+            target:
+                current,
 
-            junctionId: current.id,
-
-            target: current.position,
-
-            targetId: current.id,
+            targetId:
+                null,
 
             distance:
-                distanceBetween(
-                    current.position,
-                    next.position
+                calculatePolylineDistance(
+                    routePath.slice(
+                        i,
+                        routePath.length
+                    )
                 )
         });
+
+
+        lastBearing =
+            outgoingBearing;
     }
 
 
     /*
-     * Final approach.
+     * Final instruction.
+     *
+     * IMPORTANT:
+     * The route itself ends at the road/access point,
+     * not inside the building.
      */
 
     const finalTarget =
-        getDestinationPosition(
-            destination
-        );
+        routePath[
+            routePath.length - 1
+        ];
 
 
-    if (finalTarget) {
-
-        instructions.push({
-
-            type: "destination",
-
-            icon: "🏁",
-
-            text:
-                `Arrive at ${destination.name}`,
-
-            target: finalTarget,
-
-            targetId: destinationId,
-
-            distance:
-                junctionRoute.length > 0
-                    ? distanceBetween(
-                        junctionRoute[
-                            junctionRoute.length - 1
-                        ].position,
-                        finalTarget
-                    )
-                    : distanceBetween(
-                        currentUserPosition,
-                        finalTarget
-                    )
-        });
-    }
+    instructions.push({
+        type: "destination",
+        icon: "🏁",
+        text:
+            `Arrive near ${destination.name}`,
+        target:
+            finalTarget,
+        targetId:
+            destinationId,
+        distance: 0
+    });
 
 
     return instructions;
@@ -4610,6 +5996,645 @@ let activeBlockFloorView = null;
 /* ---------------------------------------------------------
    FLOOR DATA NORMALIZER
 --------------------------------------------------------- */
+/* =========================================================
+   N BLOCK FLOOR DATA
+   ---------------------------------------------------------
+   • Classrooms only
+   • Stairs only
+   • No elevator
+   • Drinking water available
+   • Back-side staircase access
+========================================================= */
+
+const nBlockData = {
+
+    commonFacilities: [
+        "🪜 Staircases available",
+        "💧 Drinking water facility",
+        "🚪 Back-side staircase access to classrooms",
+        "🚫 No elevator"
+    ],
+
+    floors: {
+
+        "Ground Floor": [
+            { room: "101", detail: "Class Room" },
+            { room: "102", detail: "Class Room" },
+            { room: "103", detail: "Class Room" }
+        ],
+
+        "First Floor": [
+            { room: "201", detail: "Class Room" },
+            { room: "202", detail: "Class Room" },
+            { room: "203", detail: "Class Room" }
+        ],
+
+        "Second Floor": [
+            { room: "301", detail: "Class Room" },
+            { room: "302", detail: "Class Room" },
+            { room: "303", detail: "Class Room" }
+        ]
+
+    }
+};
+/* =========================================================
+   MECHANICAL BLOCK FLOOR DATA
+   ---------------------------------------------------------
+   • Elevator on every floor
+   • Cooling drinking water
+   • Hand wash
+   • First aid
+   • Notice board
+========================================================= */
+
+const mechBlockData = {
+
+    commonFacilities: [
+        "🛗 Elevator available on every floor",
+        "❄️ Cooling drinking water available on every floor",
+        "🧼 Hand wash facility available on every floor",
+        "🩹 First aid available",
+        "📋 Notice board available",
+        "🚻 Common toilet facilities"
+    ],
+
+    floors: {
+
+        "Ground Floor": [
+
+            { room: "M101", detail: "E-Class Room" },
+
+            {
+                room: "M109",
+                detail: "Department of Mechanical Engineering Administrative Office"
+            },
+
+            { room: "M103", detail: "Class Room" },
+
+            {
+                room: "M108",
+                detail: "Department Library"
+            },
+
+            {
+                room: "M107",
+                detail:
+                    "Department of Multilayer Thin Film Sensors for Practical Monitoring of Weld Stress — Professor Dr. K. Bramha Raju"
+            },
+
+            {
+                room: "M104",
+                detail:
+                    "Dr. K. Suresh Babu — Professor; V. Manikanth — Assistant Professor"
+            },
+
+            {
+                room: "M106",
+                detail: "Dr. K.V.M.K. Krishnam Raju — Professor"
+            },
+
+            {
+                room: "M105",
+                detail: "Dr. V. Durga Prasad — Professor"
+            },
+
+            {
+                room: "—",
+                detail: "Staff Toilet"
+            },
+
+            {
+                room: "—",
+                detail: "Staff Room"
+            }
+
+        ],
+
+        "First Floor": [
+
+            {
+                room: "M206",
+                detail: "CAD/CAM LAB"
+            },
+
+            {
+                room: "M204",
+                detail: "Programming & A.P.S.S.D.C LAB"
+            },
+
+            {
+                room: "M207",
+                detail: "N. Satish — Assistant Professor"
+            },
+
+            {
+                room: "M210",
+                detail: "Room"
+            },
+
+            {
+                room: "M209",
+                detail: "Room"
+            },
+
+            {
+                room: "M208",
+                detail:
+                    "Sri N. Harsha — Assistant Professor; G.H. Tammi Raju — Assistant Professor"
+            },
+
+            {
+                room: "M213",
+                detail: "Ladies Waiting Hall"
+            },
+
+            {
+                room: "—",
+                detail: "Drinking Water"
+            },
+
+            {
+                room: "—",
+                detail: "First Aid Box"
+            },
+
+            {
+                room: "M203",
+                detail:
+                    "Dr. S. Rajesh — Professor; I.P. Pavan Kumar Varma — Assistant Professor"
+            },
+
+            {
+                room: "M202",
+                detail:
+                    "Dr. Ch. Rama Bhadri Raju — Associate Professor; Dr. G.S.V. Seshu Kumar — Assistant Professor; M. Indra Reddy — Assistant Professor"
+            },
+
+            {
+                room: "M201",
+                detail:
+                    "S. Madhavi Rao — Assistant Professor; M. Anil Kumar — Assistant Professor; P. Ravi Varma — Assistant Professor"
+            },
+
+            {
+                room: "—",
+                detail: "Ladies Toilet"
+            }
+
+        ],
+
+        "Second Floor": [
+
+            {
+                room: "M302",
+                detail: "Seminar Hall"
+            },
+
+            {
+                room: "M301",
+                detail: "E-Class Room"
+            },
+
+            {
+                room: "M304",
+                detail: "E-Classroom"
+            },
+
+            {
+                room: "—",
+                detail: "Gents Toilet"
+            }
+
+        ],
+
+        "Third Floor": [
+
+            {
+                room: "M405",
+                detail: "PG Classroom"
+            },
+
+            {
+                room: "M402",
+                detail: "Classroom"
+            },
+
+            {
+                room: "M401",
+                detail: "Metrology Lab"
+            },
+
+            {
+                room: "M406",
+                detail: "Heat Transfer Lab"
+            },
+
+            {
+                room: "M403",
+                detail:
+                    "Engineering Mechanics Lab; Industrial Engineering Lab"
+            }
+
+        ]
+
+    }
+};
+/* =========================================================
+   IT BLOCK FLOOR DATA
+   ---------------------------------------------------------
+   • Ground-floor entrance from Open Air Auditorium
+   • Staff-only entrance
+   • Room numbering uses V prefix
+========================================================= */
+
+const itBlockData = {
+
+    commonFacilities: [
+        "🚪 Ground-floor entrance directly from Open Air Auditorium",
+        "🔒 Open-Air Auditorium entrance is staff only",
+        "💧 Drinking water available",
+        "🚻 Staff toilet facility",
+        "🪜 Staircases"
+    ],
+
+    floors: {
+
+        "Ground Floor": [
+
+            {
+                room: "V105",
+                detail: "Programming Lab"
+            },
+
+            {
+                room: "V102",
+                detail: "Web Technologies Lab"
+            },
+
+            {
+                room: "V101",
+                detail: "Head of Information Technology"
+            },
+
+            {
+                room: "—",
+                detail: "Lounge for Visitors"
+            },
+
+            {
+                room: "V107",
+                detail: "Room"
+            }
+
+        ],
+
+        "First Floor": [
+
+            {
+                room: "V203",
+                detail: "Internet Lab & Library"
+            },
+
+            {
+                room: "V202",
+                detail: "Staff Room-II"
+            },
+
+            {
+                room: "—",
+                detail: "Hobby Club & CSI Student Chapter (AP69)"
+            },
+
+            {
+                room: "V201",
+                detail: "Research and Development Lab"
+            },
+
+            {
+                room: "V208",
+                detail:
+                    "N. Rama Devi — Assistant Professor; B. Teja Sree — Assistant Professor; K. Sridevi — Assistant Professor"
+            },
+
+            {
+                room: "V209",
+                detail: "Dr. I. Hema Latha — Professor"
+            },
+
+            {
+                room: "V206",
+                detail: "Seminar Hall"
+            },
+
+            {
+                room: "V204",
+                detail:
+                    "Dr. B.D.S. Shekar — Professor; K. Srinivas — Associate Professor; Dr. S. Venkata Ramana — Professor"
+            },
+
+            {
+                room: "—",
+                detail: "Drinking Water"
+            },
+
+            {
+                room: "—",
+                detail: "Staff Toilet"
+            }
+
+        ],
+
+        "Second Floor": [
+
+            {
+                room: "V302",
+                detail: "IT-1 Classroom"
+            },
+
+            {
+                room: "V306",
+                detail: "Advanced Programming"
+            },
+
+            {
+                room: "V301",
+                detail: "IT-2 Classroom"
+            },
+
+            {
+                room: "V303",
+                detail: "Staff Room-III"
+            },
+
+            {
+                room: "V307",
+                detail: "Microprocessor / IOT Lab"
+            },
+
+            {
+                room: "V309",
+                detail: "Classroom"
+            },
+
+            {
+                room: "V308",
+                detail:
+                    "A.V. Somasundar; M. Lakshmi Narayana; M. Chilaka Rao"
+            },
+
+            {
+                room: "V301",
+                detail:
+                    "Hardware Lab-II — Dr. D. Ratna Giri, Assistant Professor"
+            }
+
+        ],
+
+        "Third Floor": [
+
+            {
+                room: "—",
+                detail: "Ladies Toilet"
+            },
+
+            {
+                room: "V403",
+                detail: "M.Tech Classroom"
+            },
+
+            {
+                room: "V402",
+                detail: "Classroom"
+            },
+
+            {
+                room: "V401",
+                detail: "Classroom"
+            },
+
+            {
+                room: "V406",
+                detail: "Project Room"
+            },
+
+            {
+                room: "V407",
+                detail:
+                    "Knowledge Engineering Lab; Network Programming Research Lab"
+            },
+
+            {
+                room: "V409",
+                detail:
+                    "V.Ch. Jwala; K.S.L.S. Sruthi"
+            },
+
+            {
+                room: "V408",
+                detail:
+                    "Bh.D.D. Priyanka; B. Manojna; K. Pavani Krishna"
+            }
+
+        ]
+
+    }
+};
+/* =========================================================
+   TECHNOLOGICAL CENTRE FLOOR DATA
+   ---------------------------------------------------------
+   CSD + CSIT
+   Ground → First → Second → Third → Fourth
+========================================================= */
+
+const technologicalCentreData = {
+
+    commonFacilities: [
+        "🪜 Staircase access",
+        "🏢 CSD & CSIT facilities",
+        "💻 Technology and innovation facilities"
+    ],
+
+    floors: {
+
+        "Ground Floor": [
+
+            {
+                room: "—",
+                detail: "AICTE IDEAL LAB"
+            },
+
+            {
+                room: "—",
+                detail: "Registration Desk"
+            },
+
+            {
+                room: "—",
+                detail: "Project Discussion Room"
+            },
+
+            {
+                room: "—",
+                detail: "Makers Space Demonstration Room"
+            },
+
+            {
+                room: "—",
+                detail: "Design Center Room"
+            },
+
+            {
+                room: "—",
+                detail: "Server Room"
+            },
+
+            {
+                room: "—",
+                detail: "3D Tool Room"
+            },
+
+            {
+                room: "—",
+                detail: "AI Computing Lab — NVIDIA RTX 5090 GPU Facility"
+            },
+
+            {
+                room: "—",
+                detail: "PCB Machine"
+            },
+
+            {
+                room: "—",
+                detail: "Smart Class & Training Discussion"
+            },
+
+            {
+                room: "—",
+                detail: "Cafe for Coffee and Tea"
+            },
+
+            {
+                room: "—",
+                detail: "AICTE IDEAL LAB Coordinator"
+            },
+
+            {
+                room: "—",
+                detail: "Power Room"
+            }
+
+        ],
+
+        "First Floor": [
+
+            {
+                room: "—",
+                detail: "Alumni House"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Smart Tech Solutions"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Real Time Solutions"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Challenging Techno Solutions"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Global Care Solutions"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — MSR Technologies"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Framey Technologies"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Intelligent Technologies"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Virtual Technologies"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Students Start-up Room — Green Technology Solutions"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "SBI Bank (Chinna Amiram Branch)"
+            }
+
+        ],
+
+        "Second Floor": [
+
+            {
+                room: "—",
+                detail: "Technology Centre"
+            },
+
+            {
+                room: "—",
+                detail: "Innovation Centre"
+            }
+
+        ],
+
+        "Third Floor": [
+
+            {
+                room: "—",
+                detail: "I-HUB Digital Learning Centre"
+            },
+
+            {
+                room: "—",
+                detail:
+                    "Third Floor and Fourth Floor are connected through I-HUB Digital Learning Centre with staircase"
+            }
+
+        ],
+
+        "Fourth Floor": [
+
+            {
+                room: "—",
+                detail:
+                    "Connected to Third Floor through I-HUB Digital Learning Centre staircase"
+            }
+
+        ]
+
+    }
+};
 const administrativeBlockData = {
 
     entrances: [
@@ -4801,6 +6826,49 @@ function getBlockFloorData(blockId) {
             title: "S Block",
             floors: sBlockData.floors,
             commonFacilities: sBlockData.commonFacilities
+        };
+
+    }
+
+        if (blockId === "n-block") {
+
+        return {
+            title: "N Block",
+            floors: nBlockData.floors,
+            commonFacilities: nBlockData.commonFacilities
+        };
+
+    }
+
+
+    if (blockId === "mech") {
+
+        return {
+            title: "Mechanical Block",
+            floors: mechBlockData.floors,
+            commonFacilities: mechBlockData.commonFacilities
+        };
+
+    }
+
+
+    if (blockId === "it") {
+
+        return {
+            title: "IT Block",
+            floors: itBlockData.floors,
+            commonFacilities: itBlockData.commonFacilities
+        };
+
+    }
+
+
+    if (blockId === "technological-centre") {
+
+        return {
+            title: "Technological Centre",
+            floors: technologicalCentreData.floors,
+            commonFacilities: technologicalCentreData.commonFacilities
         };
 
     }
@@ -6497,11 +8565,15 @@ function showLocationInfo(destinationId) {
 
 if (
     details.customType === "s-block" ||
+    details.customType === "n-block" ||
+    details.customType === "mech-block" ||
+    details.customType === "it-block" ||
     details.customType === "civil-block" ||
     details.customType === "admin-block" ||
     details.customType === "ece-block" ||
     details.customType === "eee-block" ||
-    details.customType === "silver-jubilee"
+    details.customType === "silver-jubilee" ||
+    details.customType === "technological-centre"
 ) {
     renderBlockFloorDirectory(destinationId);
     locationInfo.classList.add("visible");
@@ -7460,11 +9532,21 @@ const routeDistance =
 }
 
 
-function buildLiveRoute(destinationId, options = {}) {
+function buildLiveRoute(
+    destinationId,
+    options = {}
+) {
 
     const location =
-        campusLocations[destinationId];
-    // HARD GEOFENCE SAFETY LOCK
+        campusLocations[
+            destinationId
+        ];
+
+
+    /* =====================================================
+       HARD GEOFENCE SAFETY LOCK
+    ===================================================== */
+
     if (
         !navigationGeofenceConfirmed ||
         !currentUserPosition ||
@@ -7473,7 +9555,9 @@ function buildLiveRoute(destinationId, options = {}) {
             currentUserPosition[1]
         )
     ) {
-        navigationActive = false;
+
+        navigationActive =
+            false;
 
         statusMessage.innerHTML =
             "🚫 <strong>Navigation locked</strong><br>" +
@@ -7481,14 +9565,22 @@ function buildLiveRoute(destinationId, options = {}) {
 
         return false;
     }
-    if (!location) {
+
+
+    if (
+        !location
+    ) {
+
         statusMessage.textContent =
             "Unknown destination.";
 
         return false;
     }
 
-    if (!currentUserPosition) {
+
+    if (
+        !currentUserPosition
+    ) {
 
         statusMessage.textContent =
             "📍 Finding your location first...";
@@ -7498,16 +9590,16 @@ function buildLiveRoute(destinationId, options = {}) {
         return false;
     }
 
+
     const destinationPosition =
-        getDestinationPosition(location);
+        getDestinationPosition(
+            location
+        );
 
-    const accessPoint =
-        getBestAccessPoint(
-            destinationId,
-            currentUserPosition
-        ) || destinationPosition;
 
-    if (!destinationPosition || !accessPoint) {
+    if (
+        !destinationPosition
+    ) {
 
         statusMessage.textContent =
             "Unable to locate that destination yet.";
@@ -7515,116 +9607,243 @@ function buildLiveRoute(destinationId, options = {}) {
         return false;
     }
 
-    const startJunction =
-        findNearestJunction(
+
+    /* =====================================================
+       FIND THE BEST DESTINATION ACCESS POINT
+       -----------------------------------------------------
+       We first prefer a real entrance/access point.
+
+       This prevents the route from travelling through
+       the building polygon.
+    ===================================================== */
+
+    const accessPoint =
+        getBestAccessPoint(
+            destinationId,
             currentUserPosition
         );
 
-    const endJunction =
-        findNearestJunction(
-            accessPoint
+
+    /*
+     * If the destination has an access point,
+     * route toward that access point.
+     *
+     * Otherwise route toward the nearest road point
+     * to the destination itself.
+     */
+
+    const roadTarget =
+        accessPoint ||
+        destinationPosition;
+
+
+    /* =====================================================
+       REAL ROAD ROUTING
+    ===================================================== */
+
+    const routeResult =
+        findShortestRoadPath(
+            currentUserPosition,
+            roadTarget
         );
 
+
     if (
-        !startJunction.id ||
-        !endJunction.id
+        !routeResult ||
+        !Array.isArray(
+            routeResult.path
+        ) ||
+        routeResult.path.length < 2
     ) {
 
         statusMessage.textContent =
-            "Unable to connect your location to the campus route network.";
+            "No campus road route could be found.";
 
         return false;
     }
 
-    const routeResult =
-        findShortestPath(
-            startJunction.id,
-            endJunction.id
-        );
 
-    if (!routeResult) {
+    /* =====================================================
+       BUILD CLEAN ROAD-ONLY ROUTE
+    ===================================================== */
 
-        statusMessage.textContent =
-            "No route could be found to that destination yet.";
+    const fullPath = [];
 
-        return false;
-    }
 
-    const fullPath = [
-        currentUserPosition
-    ];
+    routeResult.path.forEach(
+        point => {
 
-    routeResult.path.forEach(point => {
+            if (
+                !point
+            ) {
+                return;
+            }
+
+            const previousPoint =
+                fullPath[
+                    fullPath.length - 1
+                ];
+
+
+            if (
+                !previousPoint ||
+                distanceBetween(
+                    previousPoint,
+                    point
+                ) > 0.5
+            ) {
+
+                fullPath.push(
+                    point
+                );
+            }
+        }
+    );
+
+
+    /*
+     * IMPORTANT:
+     *
+     * Do NOT draw a line from the road
+     * into the middle of the building.
+     *
+     * If a surveyed entrance/access point exists,
+     * the route ends there.
+     *
+     * Otherwise the route ends at the nearest
+     * road point to the destination.
+     */
+
+    const routeEnd =
+        accessPoint
+            ? accessPoint
+            : routeResult
+                .destinationRoad
+                ?.point;
+
+
+    if (
+        routeEnd
+    ) {
 
         const previousPoint =
-            fullPath[fullPath.length - 1];
+            fullPath[
+                fullPath.length - 1
+            ];
 
         if (
             !previousPoint ||
             distanceBetween(
                 previousPoint,
-                point
+                routeEnd
             ) > 0.5
         ) {
-            fullPath.push(point);
+
+            /*
+             * Only add the access point if it is
+             * genuinely near the road.
+             *
+             * This keeps the visual route from
+             * crossing an entire building.
+             */
+
+            const roadDistance =
+                routeResult
+                    .destinationRoad
+                    ?.distance;
+
+
+            if (
+                accessPoint &&
+                Number.isFinite(
+                    roadDistance
+                ) &&
+                roadDistance <= 25
+            ) {
+
+                fullPath.push(
+                    accessPoint
+                );
+            }
         }
-    });
-
-    if (
-        distanceBetween(
-            fullPath[fullPath.length - 1],
-            accessPoint
-        ) > 0.5
-    ) {
-        fullPath.push(accessPoint);
     }
 
+
     if (
-        distanceBetween(
-            fullPath[fullPath.length - 1],
-            destinationPosition
-        ) > 0.5
+        fullPath.length < 2
     ) {
-        fullPath.push(destinationPosition);
+
+        statusMessage.textContent =
+            "Route is too short to display.";
+
+        return false;
     }
 
-   activeRoutePath = fullPath;
 
-/*
- * Keep a permanent copy of the complete route
- * for turn-by-turn navigation calculations.
- *
- * activeRoutePath may later be trimmed by
- * updateRouteProgress(), but this copy stays intact.
- */
-navigationInstructionRoutePath =
-    fullPath.map(point => [
-        point[0],
-        point[1]
-    ]);
+    /* =====================================================
+       SAVE ROUTE
+    ===================================================== */
 
-activeRouteAccessPoint = accessPoint;
-activeDestinationId = destinationId;
+    activeRoutePath =
+        fullPath;
 
-navigationInstructions =
-    buildNavigationInstructions(
-        fullPath,
-        destinationId
-    );
 
-currentNavigationInstruction = 0;
+    navigationInstructionRoutePath =
+        fullPath.map(
+            point => [
+                point[0],
+                point[1]
+            ]
+        );
 
-nextNavigationTarget = null;
 
-navigationHeading = null;
-navigationHeadingSource = "none";
-navigationLastHeadingPosition = null;
-navigationPassedInstruction = false;
+    activeRouteAccessPoint =
+        accessPoint;
 
-navigationActive = true;
-navigationCompleted = false;
 
-    if (routeLayer) {
+    activeDestinationId =
+        destinationId;
+
+
+    navigationInstructions =
+        buildNavigationInstructions(
+            fullPath,
+            destinationId
+        );
+
+
+    currentNavigationInstruction =
+        0;
+
+    nextNavigationTarget =
+        null;
+
+    navigationHeading =
+        null;
+
+    navigationHeadingSource =
+        "none";
+
+    navigationLastHeadingPosition =
+        null;
+
+    navigationPassedInstruction =
+        false;
+
+    navigationActive =
+        true;
+
+    navigationCompleted =
+        false;
+
+
+    /* =====================================================
+       DRAW ONLY THE ROAD ROUTE
+    ===================================================== */
+
+    if (
+        routeLayer
+    ) {
 
         routeLayer.setLatLngs(
             fullPath
@@ -7632,30 +9851,48 @@ navigationCompleted = false;
 
     } else {
 
-        routeLayer = L.polyline(
-            fullPath,
-            {
-                color: "#4f46e5",
-                weight: 5,
-                opacity: 0.85,
-                lineCap: "round",
-                lineJoin: "round"
-            }
-        ).addTo(map);
+        routeLayer =
+            L.polyline(
+                fullPath,
+                {
+                    color: "#4f46e5",
+                    weight: 5,
+                    opacity: 0.85,
+                    lineCap: "round",
+                    lineJoin: "round"
+                }
+            ).addTo(
+                map
+            );
     }
 
-    if (options.fitMap) {
+
+    /* =====================================================
+       MAP FIT
+    ===================================================== */
+
+    if (
+        options.fitMap
+    ) {
 
         map.flyToBounds(
-            L.latLngBounds(fullPath),
+            L.latLngBounds(
+                fullPath
+            ),
             {
-                padding: [50, 50],
+                padding: [
+                    50,
+                    50
+                ],
                 duration: 0.8
             }
         );
     }
 
-    lastRerouteTime = Date.now();
+
+    lastRerouteTime =
+        Date.now();
+
 
     const totalDistance =
         Math.round(
@@ -7664,40 +9901,45 @@ navigationCompleted = false;
             )
         );
 
+
     let displayDistance;
 
-if (totalDistance >= 1000) {
 
-    displayDistance =
-        `${(
-            totalDistance / 1000
-        ).toFixed(1)} km`;
+    if (
+        totalDistance >=
+        1000
+    ) {
 
-} else {
+        displayDistance =
+            `${(
+                totalDistance /
+                1000
+            ).toFixed(1)} km`;
 
-    displayDistance =
-        `${totalDistance} m`;
-}
+    } else {
 
-
-statusMessage.innerHTML =
-    `🧭 <strong>Route to ${location.name}</strong> · ` +
-    `~${totalDistance} m away`;
-
-
-updateNavigationPanel(
-    location.name,
-    displayDistance,
-    currentGpsAccuracy
-        ? `GPS accuracy ±${Math.round(
-            currentGpsAccuracy
-        )} m`
-        : "GPS navigation active",
-    "🧭"
-);
+        displayDistance =
+            `${totalDistance} m`;
+    }
 
 
-return true;
+    statusMessage.innerHTML =
+        `🧭 <strong>Route to ${location.name}</strong><br>` +
+        `🛣️ Road route · ~${displayDistance}`;
+
+
+    updateNavigationPanel(
+        location.name,
+        currentGpsAccuracy
+            ? `GPS accuracy ±${Math.round(
+                currentGpsAccuracy
+            )} m`
+            : "GPS navigation active",
+        "🧭"
+    );
+
+
+    return true;
 }
 
 
@@ -8093,32 +10335,7 @@ if (smoothedPosition) {
  * local projection is highly accurate for
  * route-distance calculations.
  */
-function navigationPointToXY(
-    point,
-    referenceLatitude
-) {
 
-    const METERS_PER_DEGREE_LAT =
-        111320;
-
-    const METERS_PER_DEGREE_LNG =
-        111320 *
-        Math.cos(
-            referenceLatitude *
-            Math.PI /
-            180
-        );
-
-    return {
-        x:
-            point[1] *
-            METERS_PER_DEGREE_LNG,
-
-        y:
-            point[0] *
-            METERS_PER_DEGREE_LAT
-    };
-}
 
 
 /*
@@ -8169,9 +10386,14 @@ function projectNavigationPointOnSegment(
             );
 
         return {
-            distance,
-            fraction: 0
-        };
+    distance,
+    fraction: 0,
+
+    point: [
+        segmentStart[0],
+        segmentStart[1]
+    ]
+};
     }
 
     let fraction =
@@ -8204,10 +10426,26 @@ function projectNavigationPointOnSegment(
             (p.y - projectedY) ** 2
         );
 
-    return {
-        distance,
-        fraction
-    };
+   return {
+    distance,
+    fraction,
+
+    point: [
+        segmentStart[0] +
+            fraction *
+            (
+                segmentEnd[0] -
+                segmentStart[0]
+            ),
+
+        segmentStart[1] +
+            fraction *
+            (
+                segmentEnd[1] -
+                segmentStart[1]
+            )
+    ]
+};
 }
 
 
@@ -8786,7 +11024,7 @@ function drawCampusOverlays() {
 
     Object.entries(campusLocations).forEach(([id, location]) => drawCampusLocation(id, location));
 
-    drawVerifiedConnections();
+    
 }
 
 
