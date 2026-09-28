@@ -11978,7 +11978,7 @@ body::after {
         fixed;
 
     inset:
-        -12%;
+        0;
 
     pointer-events:
         none;
@@ -14359,4 +14359,58 @@ body > .background-glow {
     * {
         outline: 1px solid rgba(255, 0, 0, 0.08) !important;
     }
+}
+/* =========================================================
+   SRKR GO — FINAL MOBILE VIEWPORT LOCK
+   Prevent horizontal page scrolling on phones.
+   ========================================================= */
+
+html {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip !important;
+}
+
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip !important;
+}
+
+/* Fallback for browsers that do not support overflow: clip */
+@supports not (overflow: clip) {
+    html,
+    body {
+        overflow-x: hidden !important;
+    }
+}
+
+/* Never allow the main UI containers to exceed the viewport */
+.college-header,
+main,
+.user-counter,
+footer {
+    width: 100%;
+    max-width: 100%;
+}
+
+.header-inner,
+.navigator-card {
+    max-width: 100%;
+}
+
+/* Background layers must stay inside the viewport */
+body::before,
+body::after {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+}
+
+/* The fixed star canvas must not create horizontal overflow */
+#srkrSpaceCanvas {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
 }
