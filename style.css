@@ -14354,3 +14354,9 @@ body > .background-glow {
             saturate(125%) !important;
     }
 }
+/* TEMPORARY MOBILE OVERFLOW DIAGNOSTIC */
+@media (max-width: 700px) {
+    * {
+        outline: 1px solid rgba(255, 0, 0, 0.08) !important;
+    }
+}
