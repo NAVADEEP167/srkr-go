@@ -15091,7 +15091,7 @@ footer,
     color: #f5f5f7 !important;
 
     max-height:
-        min(34vh, 360px) !important;
+        min(34vh, 360px);
 
     overflow-y: auto !important;
 }
@@ -15206,7 +15206,7 @@ footer,
         #f5f5f7 !important;
 
     max-height:
-        min(34vh, 360px) !important;
+        min(34vh, 360px);
 }
 
 @media (max-width: 700px) {
@@ -15215,7 +15215,7 @@ footer,
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px) !important;
 
-    max-height: calc(100dvh - 24px) !important;
+    max-height: 45dvh;
 
     box-sizing: border-box;
 
@@ -15232,8 +15232,7 @@ footer,
         width: calc(100vw - 12px) !important;
         max-width: calc(100vw - 12px) !important;
 
-        max-height: calc(100dvh - 16px) !important;
-
+max-height: 45dvh;
         left: 50% !important;
         bottom: 6px !important;
     }
@@ -18919,7 +18918,7 @@ html:has(body.quick-facilities-open) {
         width: min(420px, calc(100vw - 28px)) !important;
         max-width: calc(100vw - 28px) !important;
 
-        max-height: calc(100dvh - 28px) !important;
+        max-height: 45dvh;
 
         left: 50% !important;
         bottom: 14px !important;
@@ -18936,8 +18935,7 @@ html:has(body.quick-facilities-open) {
     width: min(420px, calc(100vw - 20px)) !important;
     max-width: calc(100vw - 20px) !important;
 
-    max-height: calc(100dvh - 20px) !important;
-
+max-height: 45dvh;
     box-sizing: border-box;
 
     left: 50% !important;
@@ -18955,8 +18953,7 @@ html:has(body.quick-facilities-open) {
         width: calc(100vw - 16px) !important;
         max-width: calc(100vw - 16px) !important;
 
-        max-height: calc(100dvh - 16px) !important;
-
+max-height: 45dvh;
         left: 50% !important;
         bottom: 8px !important;
     }
@@ -18968,8 +18965,7 @@ html:has(body.quick-facilities-open) {
         width: calc(100vw - 12px) !important;
         max-width: calc(100vw - 12px) !important;
 
-        max-height: calc(100dvh - 12px) !important;
-
+max-height: 45dvh;
         left: 50% !important;
         bottom: 6px !important;
     }
@@ -20932,4 +20928,22 @@ body.srkr-feedback-modal-open {
 
 .srkr-construction-label::before {
     display: none !important;
+}
+/* Faculty destination pending verification */
+.faculty-location-pending {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid #f0d28a;
+    border-radius: 10px;
+    background: #fffbeb;
+    color: #854d0e;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.faculty-action:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.2);
 }
