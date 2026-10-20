@@ -11,6 +11,27 @@ function escapeHTML(value) {
         .replace(/'/g, "&#039;");
 }
 /* =========================================================
+   SAFE BROWSER STORAGE
+========================================================= */
+
+function srkrSafeStorageGet(key, fallback = null) {
+    try {
+        const value = window["localStorage"]["getItem"](key);
+        return value === null ? fallback : value;
+    } catch (error) {
+        return fallback;
+    }
+}
+
+function srkrSafeStorageSet(key, value) {
+    try {
+        window["localStorage"]["setItem"](key, String(value));
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+/* =========================================================
    SRKR GO — MASTER SCRIPT
    ---------------------------------------------------------
    Updated: campus locations now use surveyed corner
@@ -60,13 +81,18 @@ async function updateSRKRGoUserCount() {
         document.getElementById("userCount");
 
     if (!userCount) {
-        return;
-    }
+    return;
+}
+
+if (!supabaseClient) {
+    userCount.textContent = "Growing";
+    return;
+}
 
     try {
 
         const alreadyCounted =
-            localStorage.getItem(
+            srkrSafeStorageGet(
                 "srkrGoUserCounted"
             );
 
@@ -82,7 +108,7 @@ async function updateSRKRGoUserCount() {
                 throw error;
             }
 
-            localStorage.setItem(
+            srkrSafeStorageSet(
                 "srkrGoUserCounted",
                 "true"
             );
@@ -137,7 +163,7 @@ const SRKR_ACTIVE_HEARTBEAT_INTERVAL =
 
 
 let srkrActiveSessionId =
-    localStorage.getItem(
+    srkrSafeStorageGet(
         SRKR_ACTIVE_SESSION_KEY
     );
 
@@ -178,7 +204,7 @@ if (!srkrActiveSessionId) {
     }
 
 
-    localStorage.setItem(
+    srkrSafeStorageSet(
         SRKR_ACTIVE_SESSION_KEY,
         srkrActiveSessionId
     );
@@ -201,8 +227,16 @@ async function updateSRKRGoActiveUsers() {
 
 
     if (!activeUserCount) {
-        return;
-    }
+    return;
+}
+
+if (
+    !supabaseClient ||
+    typeof supabaseClient.rpc !== "function"
+) {
+    activeUserCount.textContent = "—";
+    return;
+}
 
 
     /* Prevent overlapping requests */
@@ -456,7 +490,7 @@ const campusLocations = {
     name: "N Block",
     category: "Academic",
     type: "area",
-    customType: "n-block",    
+    customType: "n-block",
     corners: [
             [16.544091333689746, 81.49590861593775],
             [16.544088762521824, 81.49630424176621],
@@ -4341,6 +4375,8 @@ let currentGpsAccuracy = null;
 let userLocationMarker = null;
 let userAccuracyCircle = null;
 let gpsWatchId = null;
+let gpsTrackingRequested = false;
+let gpsPausedForHiddenTab = false;
 let campusOverlaysDrawn = false;
 let mapHasLoaded = false;
 const markers = {};
@@ -4348,6 +4384,15 @@ const markers = {};
 // Live navigation state
 let navigationActive = false;
 let activeDestinationId = null;
+function notifySRKRDestinationChanged(
+    destinationId = activeDestinationId
+) {
+    document.dispatchEvent(
+        new CustomEvent("srkr:destination-changed", {
+            detail: { destinationId }
+        })
+    );
+}
 let activeRoutePath = [];
 
 /*
@@ -4515,7 +4560,7 @@ const NAV_APPROACH_HEADING_TOLERANCE = 70;
  * If the instruction target is this close behind
  * the user, consider that instruction passed.
  */
-const NAV_PASSED_TARGET_DISTANCE = 4; 
+const NAV_PASSED_TARGET_DISTANCE = 4;
 
 /* =========================================================
    15b. LIVE NAVIGATION UI
@@ -5443,7 +5488,8 @@ srkrNavigationStop.addEventListener(
 resetNavigationMapRotation();
 
 navigationCompleted = false;
-        activeDestinationId = null;
+activeDestinationId = null;
+notifySRKRDestinationChanged();
         activeRoutePath = [];
         navigationInstructionRoutePath = [];
         activeRouteAccessPoint = null;
@@ -5583,7 +5629,7 @@ const srkrNavigationInstructionDistance =
 const srkrNavigationHeadingArrow =
     document.getElementById(
         "srkrNavigationHeadingArrow"
-    ); 
+    );
 /* =========================================================
    STEP 18. HEADING INDICATOR
 ========================================================= */
@@ -9325,7 +9371,7 @@ function runSRKRRouteReachabilityDiagnostics() {
    The point is projected onto the nearest surveyed road.
    It is then connected only to the road nodes that
    bracket that exact projection.
-   
+
    This prevents artificial diagonal "spurs" across
    campus areas/buildings.
 ========================================================= */
@@ -14180,7 +14226,7 @@ function attachDestinationNavigationAction(destinationId) {
             }
 
             activeDestinationId = destinationId;
-
+notifySRKRDestinationChanged();
             // Close the information card.
             if (locationInfo) {
                 locationInfo.classList.remove("visible");
@@ -14327,17 +14373,7 @@ async function loadLocationFanPhotos(destinationId) {
 
 
 
-function attachLocationMediaActions(destinationId) {
-    const button = document.querySelector(
-        `[data-location-media="${destinationId}"]`
-    );
 
-    if (button) {
-        button.onclick = () => openLocationMedia(destinationId);
-    }
-
-    loadLocationFanPhotos(destinationId);
-}
 
 
 function openLocationMedia(
@@ -15942,7 +15978,7 @@ const SRKR_POPULAR_DESTINATIONS = [
 function getSRKRRecentSearches() {
     try {
         const saved = JSON.parse(
-            localStorage.getItem(SRKR_SEARCH_HISTORY_KEY) || "[]"
+           srkrSafeStorageGet(SRKR_SEARCH_HISTORY_KEY) || "[]"
         );
 
         if (!Array.isArray(saved)) return [];
@@ -15973,7 +16009,7 @@ function rememberSRKRSearch(destinationId) {
             name: location.name
         });
 
-        localStorage.setItem(
+        srkrSafeStorageSet(
             SRKR_SEARCH_HISTORY_KEY,
             JSON.stringify(recent.slice(0, 5))
         );
@@ -16150,81 +16186,6 @@ function getSRKRClosestSearchMatches(query) {
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 3);
 }
-
-/* =========================================================
-   SRKR GO — CLOSEST SEARCH MATCHES
-========================================================= */
-function getSRKRClosestSearchMatches(query) {
-    const tokens = getSearchTokens(query);
-
-    if (!tokens.length) return [];
-
-    const matches = [];
-
-    enhancedSmartSearchData.forEach(item => {
-        const destinationId = item.targetId || item.id;
-
-        if (!destinationId || !campusLocations[destinationId]) {
-            return;
-        }
-
-        const searchableText = [
-            item.title || "",
-            item.subtitle || "",
-            item.searchableText || "",
-            Array.isArray(item.keywords)
-                ? item.keywords.join(" ")
-                : ""
-        ].join(" ");
-
-        const words = normalizeSearchQuery(searchableText)
-            .split(" ")
-            .filter(word => word.length >= 4);
-
-        let totalDistance = 0;
-
-        for (const token of tokens) {
-            if (token.length < 4) return;
-
-            let bestDistance = Infinity;
-
-            for (const word of words) {
-                bestDistance = Math.min(
-                    bestDistance,
-                    getSearchEditDistance(token, word)
-                );
-
-                if (bestDistance === 0) break;
-            }
-
-            const allowedDistance = token.length <= 6 ? 1 : 2;
-
-            if (bestDistance > allowedDistance) return;
-
-            totalDistance += bestDistance;
-        }
-
-        matches.push({
-            destinationId,
-            distance: totalDistance
-        });
-    });
-
-    const bestMatches = new Map();
-
-    matches
-        .sort((a, b) => a.distance - b.distance)
-        .forEach(match => {
-            if (!bestMatches.has(match.destinationId)) {
-                bestMatches.set(match.destinationId, match);
-            }
-        });
-
-    return Array.from(bestMatches.values())
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, 3);
-}
-
 searchInput.addEventListener(
     "input",
     function () {
@@ -16324,7 +16285,7 @@ if (
                         "none";
 
 
-                    
+
 destinationSelect.value = naturalId;
 
 rememberSRKRSearch(naturalId);
@@ -16338,7 +16299,7 @@ focusDestination(naturalId);
         }
 
 
-        
+
         searchSuggestions.style.display =
             "block";
 
@@ -16353,7 +16314,7 @@ focusDestination(naturalId);
             "";
 
 
-        
+
         if (!query) {
             renderSRKRSearchDiscovery();
             return;
@@ -16574,7 +16535,7 @@ if (results.length === 0) {
         icon = "🧪";
     }
 
-    break;    
+    break;
 
                 }
 
@@ -17113,6 +17074,7 @@ navigateButton.addEventListener("click", function () {
 
     navigationCompleted = false;
     activeDestinationId = destinationId;
+notifySRKRDestinationChanged();
     navigationPending = true;
 
     /*
@@ -17202,7 +17164,7 @@ if (
 }
 });
 
-   
+
 
 
 /* =========================================================
@@ -18213,7 +18175,7 @@ box-shadow:
                             return;
                         }
 
-                    
+
                         const destinationPosition =
                             getDestinationPosition(
                                 currentLocation
@@ -18259,7 +18221,7 @@ box-shadow:
                         ) {
                             askDestinationConfirmation();
                         }
-  
+
 
                     },
                     NAV_DESTINATION_CONFIRM_RETRY
@@ -18305,7 +18267,7 @@ const routeDistance =
             )
             : Infinity;
 
- 
+
     /* =====================================================
        DESTINATION CONFIRMATION
     ===================================================== */
@@ -19242,7 +19204,16 @@ function startLocationTracking() {
 
     return;
 }
+gpsTrackingRequested = true;
 
+if (document.hidden) {
+    gpsPausedForHiddenTab = true;
+    locationButton.disabled = true;
+    locationButton.textContent = "📍 Waiting for tab...";
+    return;
+}
+
+gpsPausedForHiddenTab = false;
     locationButton.disabled = true;
 
     locationButton.textContent =
@@ -19267,7 +19238,43 @@ function startLocationTracking() {
         );
 }
 
+document.addEventListener("visibilitychange", function () {
+    if (
+        !gpsTrackingRequested ||
+        !navigator.geolocation
+    ) {
+        return;
+    }
 
+    if (document.hidden) {
+        if (gpsWatchId !== null) {
+            navigator.geolocation.clearWatch(gpsWatchId);
+            gpsWatchId = null;
+        }
+
+        gpsPausedForHiddenTab = true;
+        return;
+    }
+
+    if (
+        !gpsPausedForHiddenTab ||
+        gpsWatchId !== null
+    ) {
+        return;
+    }
+
+    gpsPausedForHiddenTab = false;
+
+    gpsWatchId = navigator.geolocation.watchPosition(
+        handleGPSUpdate,
+        handleGPSError,
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 30000
+        }
+    );
+});
 locationButton.addEventListener("click", function () {
 
         // Preserve QR starting-point behavior.
@@ -20062,7 +20069,7 @@ will-change: transform;
                 blur(1px);
             z-index: 1;
 
-            
+
 opacity: 0;
 animation: none;
 
@@ -20502,7 +20509,7 @@ updateNavigationCamera(
      * build the requested route.
      */
 
-    
+
 if (
     navigationPending &&
     navigationGeofenceConfirmed === true &&
@@ -20698,7 +20705,7 @@ if (!userLocationMarker) {
     if (
         navigationActive &&
         activeDestinationId
-        
+
     ) {
 
         /*
@@ -20771,7 +20778,7 @@ if (!userLocationMarker) {
         liveReroute: true
     }
 );
-           
+
         }
 
 
@@ -20867,7 +20874,7 @@ function handleGPSError(error) {
         error.PERMISSION_DENIED
     ) {
 
-        
+
         /* =========================================================
    STEP 17. RESET NAVIGATION HEADING
    ---------------------------------------------------------
@@ -21052,7 +21059,7 @@ map.on(
             mapLoading.classList.add("hidden");
         }
 
-        
+
 /*
  * SRKR GO — RASTER BASEMAP
  * Uses Leaflet tiles instead of WebGL.
@@ -21123,7 +21130,7 @@ try {
 }
 }
 
-    
+
 
 
 /* =========================================================
@@ -21137,8 +21144,10 @@ function drawCampusOverlays() {
     L.polygon(campusBoundary, { color: "#4f46e5", weight: 2, fillColor: "#818cf8", fillOpacity: 0.035, interactive: false }).addTo(map);
 
     Object.entries(campusLocations).forEach(([id, location]) => drawCampusLocation(id, location));
+document.dispatchEvent(
+    new Event("srkr:campus-overlays-drawn")
+);
 
-    
 }
 
 
@@ -21274,33 +21283,43 @@ function drawVerifiedConnections() {
     );
 }
 
-
 /* =========================================================
-   40. INITIALIZE
-========================================================= */
-
-initializeMap();
-
-
-/* =========================================================
-   41. INITIAL QR MODE  (unchanged)
+   40. INITIALIZE MAP AND QR MODE
 ========================================================= */
 
 if (qrStartLocation) {
-    const waitForOverlays = setInterval(function () {
-        if (!campusOverlaysDrawn) return;
-        clearInterval(waitForOverlays);
+    document.addEventListener(
+        "srkr:campus-overlays-drawn",
+        function () {
+            const qrLocation =
+                campusLocations[qrStartLocation];
 
-        const qrLocation = campusLocations[qrStartLocation];
-        const qrPosition = getQRStartPosition();
+            const qrPosition =
+                getQRStartPosition();
 
-        if (qrPosition) map.flyTo(qrPosition, 19, { duration: 0.8 });
+            if (!qrLocation) {
+                return;
+            }
 
-        statusMessage.innerHTML = `📍 Starting point: <strong>${qrLocation.name}</strong><br>🔳 QR navigation mode`;
-    }, 100);
+            if (qrPosition && map) {
+                map.flyTo(
+                    qrPosition,
+                    19,
+                    { duration: 0.8 }
+                );
+            }
 
-    setTimeout(function () { clearInterval(waitForOverlays); }, 10000);
+            if (statusMessage) {
+                statusMessage.innerHTML =
+                    `📍 Starting point: <strong>${escapeHTML(qrLocation.name)}</strong><br>` +
+                    "🔳 QR navigation mode";
+            }
+        },
+        { once: true }
+    );
 }
+
+initializeMap();
 
 
 /* =========================================================
@@ -24983,7 +25002,7 @@ const facultyDirectory = [
 
 
 
- 
+
 // =========================
     // ECE BLOCK
 
@@ -25742,8 +25761,124 @@ const facultyDirectory = [
 function normalizeFacultyName(name) {
     return String(name || "")
         .toLowerCase()
-        .replace(/^(dr|sri|smt|mrs|mr|miss)\.?[\s-]*/i, "")
+        .replace(
+            /^\s*(?:(?:professor|prof|dr|sri|smt|mrs|mr|miss)\.?\s*)+/i,
+            ""
+        )
         .replace(/[^a-z0-9]/g, "");
+}
+
+function getFacultyInitialSignature(name) {
+    const value = String(name || "")
+        .replace(
+            /^\s*(?:(?:professor|prof|dr|sri|smt|mrs|mr|miss)\.?\s*)+/i,
+            ""
+        )
+        .trim();
+
+    const tokens = value.match(/[a-z]+\.?/gi) || [];
+    const initials = [];
+
+    for (const token of tokens) {
+        const clean = token.replace(/\./g, "").toLowerCase();
+
+        if (token.endsWith(".") && clean.length <= 3) {
+            initials.push(clean);
+            continue;
+        }
+
+        if (clean.length === 1) {
+            initials.push(clean);
+            continue;
+        }
+
+        break;
+    }
+
+    return initials.join("");
+}
+
+function facultyNameSimilarity(nameA, nameB) {
+    const a = normalizeFacultyName(nameA);
+    const b = normalizeFacultyName(nameB);
+
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+
+    let previous = Array.from(
+        { length: b.length + 1 },
+        (_, index) => index
+    );
+
+    for (let i = 1; i <= a.length; i++) {
+        const current = [i];
+
+        for (let j = 1; j <= b.length; j++) {
+            const substitutionCost =
+                a[i - 1] === b[j - 1] ? 0 : 1;
+
+            current[j] = Math.min(
+                current[j - 1] + 1,
+                previous[j] + 1,
+                previous[j - 1] + substitutionCost
+            );
+        }
+
+        previous = current;
+    }
+
+    return 1 -
+        previous[b.length] / Math.max(a.length, b.length);
+}
+
+function canMergeFacultyRecords(left, right) {
+    if (
+        left.id &&
+        right.id &&
+        left.id === right.id
+    ) {
+        return true;
+    }
+
+    const leftName =
+        normalizeFacultyName(left.name);
+
+    const rightName =
+        normalizeFacultyName(right.name);
+
+    if (!leftName || !rightName) {
+        return false;
+    }
+
+    if (leftName === rightName) {
+        return true;
+    }
+
+    const similarity = facultyNameSimilarity(
+        left.name,
+        right.name
+    );
+
+    if (similarity < 0.85) {
+        return false;
+    }
+
+    const leftInitials =
+        getFacultyInitialSignature(left.name);
+
+    const rightInitials =
+        getFacultyInitialSignature(right.name);
+
+    // Keep records separate when both have conflicting initials.
+    if (
+        leftInitials &&
+        rightInitials &&
+        leftInitials !== rightInitials
+    ) {
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -25888,23 +26023,33 @@ function normalizeFacultyLocationId(locationId) {
 
 function mergeFacultyDirectory(records) {
 
-    const groups = new Map();
+    const groups = [];
 
-    records.forEach(record => {
+records.forEach(record => {
+    const key = normalizeFacultyName(record.name);
 
-        const key = normalizeFacultyName(record.name);
+    if (!key) {
+        return;
+    }
 
-        if (!key) return;
+    let matchingGroup = groups.find(group =>
+        group.every(existingRecord =>
+            canMergeFacultyRecords(
+                existingRecord,
+                record
+            )
+        )
+    );
 
-        if (!groups.has(key)) {
-            groups.set(key, []);
-        }
+    if (!matchingGroup) {
+        matchingGroup = [];
+        groups.push(matchingGroup);
+    }
 
-        groups.get(key).push(record);
-    });
+    matchingGroup.push(record);
+});
 
-
-    const mergedRecords = [];
+const mergedRecords = [];
 
 
     groups.forEach(group => {
@@ -26037,7 +26182,15 @@ function mergeFacultyDirectory(records) {
             id: primary.id,
 
             name: primary.name,
-
+nameVariants: [
+    ...new Set(
+        group
+            .map(record =>
+                String(record.name || "").trim()
+            )
+            .filter(Boolean)
+    )
+],
             designation: mainDesignation,
 
             designations,
@@ -26075,7 +26228,8 @@ function mergeFacultyDirectory(records) {
          * Searchable fields.
          */
         merged.searchText = [
-            merged.name,
+    merged.name,
+    merged.nameVariants.join(" "),
             merged.designation,
             merged.designations.join(" "),
             merged.branch,
@@ -27219,7 +27373,7 @@ quickFacilitiesOverlay.innerHTML = `
         </div> <!-- closes quick-facilities-options -->
     </div> <!-- closes quick-facilities-panel -->
 `;
- 
+
 document.body.appendChild(
     quickFacilitiesOverlay
 );
@@ -27934,6 +28088,7 @@ function navigateToQuickFacility(
 
     navigationCompleted = false;
     activeDestinationId = destinationId;
+notifySRKRDestinationChanged();
     navigationPending = true;
 
 
@@ -28427,6 +28582,33 @@ function renderFacultyResults(query = "") {
     matches.forEach(faculty => {
         const card = document.createElement("div");
         card.className = "faculty-card";
+        const facultyLocationId =
+    normalizeFacultyLocationId(faculty.locationId);
+
+const facultyLocation =
+    facultyLocationId
+        ? campusLocations[facultyLocationId]
+        : null;
+
+let facultyHasMapDestination = false;
+
+try {
+    if (
+        facultyLocation &&
+        typeof getLocationPosition === "function"
+    ) {
+        const position =
+            getLocationPosition(facultyLocation);
+
+        facultyHasMapDestination =
+            Array.isArray(position) &&
+            position.length >= 2 &&
+            Number.isFinite(Number(position[0])) &&
+            Number.isFinite(Number(position[1]));
+    }
+} catch (error) {
+    facultyHasMapDestination = false;
+}
         card.innerHTML = `
             <div class="faculty-card-name">👨‍🏫 ${faculty.name}</div>
             <div class="faculty-card-designation">${faculty.designation}</div>
@@ -28516,10 +28698,38 @@ ${
     </div>
 
 </div>
-            <div class="faculty-card-actions">
-                <button type="button" class="faculty-action faculty-map-button">📍 Show on Map</button>
-                <button type="button" class="faculty-action faculty-route-button">🧭 Navigate</button>
-            </div>
+            ${
+    !facultyHasMapDestination
+        ? `
+        <div
+            class="faculty-location-pending"
+            role="status"
+        >
+            📍 <strong>Map location pending verification.</strong>
+            Show on Map and Navigate are disabled until
+            a valid campus destination is available.
+        </div>
+        `
+        : ""
+}
+
+<div class="faculty-card-actions">
+    <button
+        type="button"
+        class="faculty-action faculty-map-button"
+        ${facultyHasMapDestination ? "" : "disabled"}
+    >
+        📍 Show on Map
+    </button>
+
+    <button
+        type="button"
+        class="faculty-action faculty-route-button"
+        ${facultyHasMapDestination ? "" : "disabled"}
+    >
+        🧭 Navigate
+    </button>
+</div>
         `;
 
         card.querySelector(".faculty-map-button").addEventListener("click", function () { showFacultyOnMap(faculty); });
@@ -28530,18 +28740,55 @@ ${
 }
 
 function showFacultyOnMap(faculty) {
-    const location = campusLocations[faculty.locationId];
-    if (!location) { statusMessage.textContent = "Faculty location is not available."; return; }
+    const locationId =
+        normalizeFacultyLocationId(faculty?.locationId);
 
-    const position = getLocationPosition(location);
-    if (!position) { statusMessage.textContent = "Unable to locate the faculty block."; return; }
+    const location =
+        locationId
+            ? campusLocations[locationId]
+            : null;
+
+    if (!faculty || !location) {
+        statusMessage.textContent =
+            locationId === "management-studies"
+                ? "Management Studies does not yet have a verified destination on the campus map. Map display is unavailable until its location is surveyed and added."
+                : "Faculty location is not available.";
+
+        return;
+    }
+
+    const position =
+        getLocationPosition(location);
+
+    if (
+        !Array.isArray(position) ||
+        position.length < 2 ||
+        !Number.isFinite(Number(position[0])) ||
+        !Number.isFinite(Number(position[1]))
+    ) {
+        statusMessage.textContent =
+            "The faculty block does not have a valid map position.";
+
+        return;
+    }
 
     closeFacultyFinder();
-    map.flyTo(position, 19, { duration: 0.8 });
-    if (markers[faculty.locationId]) markers[faculty.locationId].openPopup();
 
-    statusMessage.innerHTML = `👨‍🏫 <strong>${faculty.name}</strong><br>📍 ${faculty.block} · ${faculty.floor} · Room ${faculty.room}
-        <br>ℹ️ Exact room navigation will be added after campus verification.`;
+    map.flyTo(position, 19, {
+        duration: 0.8
+    });
+
+    if (markers[locationId]) {
+        markers[locationId].openPopup();
+    }
+
+    statusMessage.innerHTML =
+        `👨‍🏫 <strong>${escapeHTML(faculty.name)}</strong><br>` +
+        `📍 ${escapeHTML(faculty.block)} · ` +
+        `${escapeHTML(faculty.floor)} · ` +
+        `Room ${escapeHTML(faculty.room)}<br>` +
+        "ℹ️ This shows the mapped faculty block, not a live " +
+        "personal location. Exact room navigation requires verification.";
 }
 
 function navigateToFaculty(faculty) {
@@ -28560,22 +28807,40 @@ function navigateToFaculty(faculty) {
        VALIDATE FACULTY DESTINATION
     ===================================================== */
 
+    const destinationId =
+        normalizeFacultyLocationId(
+            faculty?.locationId
+        );
+
     if (
         !faculty ||
-        !faculty.locationId ||
-        !campusLocations[faculty.locationId]
+        !destinationId ||
+        !campusLocations[destinationId]
     ) {
-
-        statusMessage.innerHTML =
-            "⚠️ <strong>Faculty location unavailable.</strong><br>" +
-            "This faculty member does not have a valid campus location.";
+        statusMessage.textContent =
+            destinationId === "management-studies"
+                ? "Management Studies does not yet have a verified campus destination. Navigation is disabled until its location is surveyed and added to the map."
+                : "Faculty location unavailable. This faculty member does not have a mapped campus destination.";
 
         return;
     }
 
+    const destinationPosition =
+        getLocationPosition(
+            campusLocations[destinationId]
+        );
 
-    const destinationId =
-        faculty.locationId;
+    if (
+        !Array.isArray(destinationPosition) ||
+        destinationPosition.length < 2 ||
+        !Number.isFinite(Number(destinationPosition[0])) ||
+        !Number.isFinite(Number(destinationPosition[1]))
+    ) {
+        statusMessage.textContent =
+            "This faculty destination does not have a valid map position. Navigation is unavailable until it is corrected.";
+
+        return;
+    }
 
 
     /* =====================================================
@@ -29435,7 +29700,12 @@ speed:
         return;
 
     }
-
+if (!supabaseClient) {
+    console.warn(
+        "SRKR Go Feedback: Supabase is unavailable."
+    );
+    return;
+}
 
     /* =====================================================
        VOTER ID
@@ -29443,7 +29713,7 @@ speed:
     ===================================================== */
 
     let feedbackVoterId =
-        localStorage.getItem(
+        srkrSafeStorageGet(
             "srkrGoFeedbackVoterId"
         );
 
@@ -29469,7 +29739,7 @@ speed:
             }
         );
 
-        localStorage.setItem(
+       srkrSafeStorageSet(
             "srkrGoFeedbackVoterId",
             feedbackVoterId
         );
@@ -31115,7 +31385,7 @@ hostDeleteOverlay
                 .join("");
 
 
-        
+
         // Host Reply: open the reply dialog.
         feed
             .querySelectorAll("[data-host-reply]")
@@ -31530,7 +31800,7 @@ await supabaseClient.rpc(
             }
 
 
-            
+
 if (
     hostDeleteOverlay.classList.contains("visible")
 ) {
@@ -31785,150 +32055,3 @@ function closeSrkrFanPhotoPopup() {
 
     document.body.classList.remove("srkr-fan-popup-open");
 }
-/* =========================================================
-   SRKR GO — FIRST-VISIT WELCOME POPUP
-========================================================= */
-
-(function initSRKRWelcomePopup() {
-
-    function showWelcomePopup() {
-        try {
-            if (
-                localStorage.getItem("srkrGoWelcomeSeen") === "true"
-            ) {
-                return;
-            }
-        } catch (error) {
-            // Continue without persistence if storage is blocked.
-        }
-
-        if (
-            document.getElementById("srkrGoWelcomeOverlay") ||
-            !document.body
-        ) {
-            return;
-        }
-
-        const style = document.createElement("style");
-
-        style.textContent = `
-            #srkrGoWelcomeOverlay {
-                position: fixed;
-                inset: 0;
-                z-index: 20000;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 20px;
-                background: rgba(4, 8, 14, 0.78);
-                backdrop-filter: blur(10px);
-            }
-
-            #srkrGoWelcomePanel {
-                width: min(100%, 420px);
-                padding: 28px;
-                border: 1px solid rgba(255,255,255,0.14);
-                border-radius: 18px;
-                background: #11151c;
-                color: #f4f7fb;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-                font-family: inherit;
-            }
-
-            #srkrGoWelcomePanel h2 {
-                margin: 0 0 10px;
-                font-size: 25px;
-            }
-
-            #srkrGoWelcomePanel p {
-                color: #aeb8c8;
-                line-height: 1.6;
-            }
-
-            #srkrGoWelcomeStart {
-                width: 100%;
-                margin-top: 12px;
-                padding: 12px 16px;
-                border: 0;
-                border-radius: 10px;
-                background: #3b82f6;
-                color: white;
-                font: inherit;
-                font-weight: 700;
-                cursor: pointer;
-            }
-
-            #srkrGoWelcomeStart:focus-visible {
-                outline: 3px solid #22c7f0;
-                outline-offset: 3px;
-            }
-        `;
-
-        document.head.appendChild(style);
-
-        const overlay = document.createElement("div");
-
-        overlay.id = "srkrGoWelcomeOverlay";
-
-        overlay.innerHTML = `
-            <section
-                id="srkrGoWelcomePanel"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="srkrGoWelcomeTitle"
-            >
-                <div style="font-size:12px;font-weight:700;letter-spacing:2px">
-                    SRKR GO
-                </div>
-
-                <h2 id="srkrGoWelcomeTitle">
-                    Welcome to SRKR Go
-                </h2>
-
-                <p>
-                    Explore campus, find facilities, and navigate
-                    to mapped destinations.
-                </p>
-
-                <button
-                    id="srkrGoWelcomeStart"
-                    type="button"
-                >
-                    Start exploring
-                </button>
-            </section>
-        `;
-
-        document.body.appendChild(overlay);
-
-        const startButton =
-            document.getElementById("srkrGoWelcomeStart");
-
-        startButton.addEventListener("click", function () {
-            try {
-                localStorage.setItem(
-                    "srkrGoWelcomeSeen",
-                    "true"
-                );
-            } catch (error) {
-                // The popup still closes if storage is blocked.
-            }
-
-            overlay.remove();
-            style.remove();
-        });
-
-        startButton.focus();
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener(
-            "DOMContentLoaded",
-            showWelcomePopup,
-            { once: true }
-        );
-    } else {
-        showWelcomePopup();
-    }
-
-})();

@@ -20,7 +20,7 @@
 <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <!-- MAIN CSS -->
 
-    
+
 
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="srkr-features.css">
@@ -36,11 +36,32 @@
     >
 
 
-    <!-- MAPLIBRE CSS -->
-<link
-    rel="stylesheet"
-    href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css"
->
+<script>
+try {
+    if (
+        window.localStorage.getItem(
+            "srkrGoWelcomeSeen"
+        ) === "true"
+    ) {
+        document.documentElement.classList.add(
+            "srkr-go-welcome-seen"
+        );
+    }
+} catch (error) {
+    // Continue normally if browser storage is unavailable.
+}
+</script>
+
+<style>
+html.srkr-go-welcome-seen #srkrWelcome {
+    display: none !important;
+}
+
+html.srkr-go-welcome-seen:has(#srkrWelcome:not(.is-closing)),
+html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
+    overflow-y: auto !important;
+}
+</style>
 
 </head>
 
@@ -347,7 +368,7 @@
 
 
             <h2>
-                Where do you want to go? 
+                Where do you want to go?
             </h2>
 
 
@@ -750,77 +771,46 @@
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
 
-
-    <!-- MAPLIBRE JS -->
-
-    <script
-    src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js">
-</script>
-
-
-    <!-- MAPLIBRE + LEAFLET BRIDGE -->
-
-    <script
-    src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js">
-</script>
-
-
     <!-- OUR JAVASCRIPT -->
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
 <script src="srkr-features.js"></script>
 <script>
-
-/* =========================================================
-   SRKR GO — WELCOME SCREEN
-========================================================= */
-
+/* SRKR GO — WELCOME SCREEN */
 (function () {
+    const welcomeScreen = document.getElementById("srkrWelcome");
+    const startButton = document.getElementById("srkrStartButton");
 
-    const welcomeScreen =
-        document.getElementById(
-            "srkrWelcome"
-        );
+    if (!welcomeScreen || !startButton) return;
 
-    const startButton =
-        document.getElementById(
-            "srkrStartButton"
-        );
-
-
-    if (
-        !welcomeScreen ||
-        !startButton
-    ) {
-        return;
+    try {
+        if (
+            window.localStorage.getItem("srkrGoWelcomeSeen") === "true"
+        ) {
+            welcomeScreen.remove();
+            return;
+        }
+    } catch (error) {
+        // Continue if browser storage is unavailable.
     }
 
-
-    startButton.addEventListener(
-        "click",
-        function () {
-
-            welcomeScreen.classList.add(
-                "is-closing"
-            );
-
-
-            setTimeout(
-                function () {
-
-                    welcomeScreen.remove();
-
-                },
-                260
-            );
-
+    startButton.addEventListener("click", function () {
+        try {
+            window.localStorage.setItem("srkrGoWelcomeSeen", "true");
+        } catch (error) {
+            // Continue even if saving is unavailable.
         }
-    );
 
+        welcomeScreen.classList.add("is-closing");
+
+        window.setTimeout(function () {
+            welcomeScreen.remove();
+        }, 260);
+    });
 })();
-
 </script>
+
 
 </body>
 

@@ -4084,7 +4084,7 @@ window.SRKRRecentDestinations = {
                     <div class="srkr-feature-list-item">
 
                         <div class="srkr-feature-list-icon">
-                            ${getNearbyIcon(destination)}
+                            ${getNearbyIcon(destinationId, destination.category)}
                         </div>
 
                         <div class="srkr-feature-list-content">
@@ -5084,42 +5084,33 @@ window.openFeaturePanel = openFeaturePanel;
 let srkrLastRecordedDestination = null;
 
 
-function watchSRKRRecentDestination() {
-
-    if (
-    typeof activeDestinationId ===
-        "string" &&
-    activeDestinationId &&
-    typeof campusLocations !==
-        "undefined" &&
-    campusLocations &&
-    campusLocations[
-        activeDestinationId
-    ]
-) {
+document.addEventListener(
+    "srkr:destination-changed",
+    function (event) {
+        const destinationId =
+            event.detail?.destinationId;
 
         if (
-            activeDestinationId !==
-            srkrLastRecordedDestination
+            typeof destinationId !== "string" ||
+            !destinationId
         ) {
-
-            addSRKRRecentDestination(
-                activeDestinationId
-            );
-
-            srkrLastRecordedDestination =
-                activeDestinationId;
-
+            srkrLastRecordedDestination = null;
+            return;
         }
 
+        if (
+            typeof campusLocations === "undefined" ||
+            !campusLocations ||
+            !campusLocations[destinationId] ||
+            destinationId === srkrLastRecordedDestination
+        ) {
+            return;
+        }
+
+        addSRKRRecentDestination(destinationId);
+
+        srkrLastRecordedDestination = destinationId;
     }
-
-}
-
-
-setInterval(
-    watchSRKRRecentDestination,
-    500
 );
 
 })();
