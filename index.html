@@ -36,7 +36,32 @@
     >
 
 
+<script>
+try {
+    if (
+        window.localStorage.getItem(
+            "srkrGoWelcomeSeen"
+        ) === "true"
+    ) {
+        document.documentElement.classList.add(
+            "srkr-go-welcome-seen"
+        );
+    }
+} catch (error) {
+    // Continue normally if browser storage is unavailable.
+}
+</script>
 
+<style>
+html.srkr-go-welcome-seen #srkrWelcome {
+    display: none !important;
+}
+
+html.srkr-go-welcome-seen:has(#srkrWelcome:not(.is-closing)),
+html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
+    overflow-y: auto !important;
+}
+</style>
 
 </head>
 
@@ -752,41 +777,29 @@
 <script src="script.js"></script>
 <script src="srkr-features.js"></script>
 <script>
-/* =========================================================
-   SRKR GO — WELCOME SCREEN
-========================================================= */
+/* SRKR GO — WELCOME SCREEN */
 (function () {
-    const welcomeScreen =
-        document.getElementById("srkrWelcome");
-
-    const startButton =
-        document.getElementById("srkrStartButton");
+    const welcomeScreen = document.getElementById("srkrWelcome");
+    const startButton = document.getElementById("srkrStartButton");
 
     if (!welcomeScreen || !startButton) return;
 
     try {
         if (
-            window.localStorage.getItem(
-                "srkrGoWelcomeSeen"
-            ) === "true"
+            window.localStorage.getItem("srkrGoWelcomeSeen") === "true"
         ) {
             welcomeScreen.remove();
             return;
         }
     } catch (error) {
-        // Continue normally if browser storage is unavailable.
+        // Continue if browser storage is unavailable.
     }
-
-    startButton.focus();
 
     startButton.addEventListener("click", function () {
         try {
-            window.localStorage.setItem(
-                "srkrGoWelcomeSeen",
-                "true"
-            );
+            window.localStorage.setItem("srkrGoWelcomeSeen", "true");
         } catch (error) {
-            // The welcome screen can still close without storage.
+            // Continue even if saving is unavailable.
         }
 
         welcomeScreen.classList.add("is-closing");
