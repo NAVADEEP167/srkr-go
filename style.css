@@ -20947,3 +20947,114 @@ body.srkr-feedback-modal-open {
     transform: none;
     filter: grayscale(0.2);
 }
+
+/* ==========================================
+   SRKR GO — DELETE FEEDBACK MODAL POLISH
+========================================== */
+
+/* Dark password input */
+.srkr-host-delete-password {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    margin-top: 8px;
+    padding: 11px 13px;
+    box-sizing: border-box;
+
+    border: 1px solid rgba(90, 195, 255, 0.24);
+    border-radius: 11px;
+
+    background: rgba(5, 8, 17, 0.74);
+    color: #edf5ff;
+
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+
+    transition: border-color 180ms ease,
+                box-shadow 180ms ease;
+}
+
+.srkr-host-delete-password::placeholder {
+    color: #9baac0;
+}
+
+.srkr-host-delete-password:focus {
+    border-color: rgba(34, 199, 240, 0.65);
+    box-shadow: 0 0 0 3px rgba(34, 199, 240, 0.12);
+}
+
+/* Glass-style close button */
+button.srkr-host-delete-close {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+
+    background: rgba(255, 255, 255, 0.05);
+    color: #dbeafe;
+
+    font-family: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 180ms ease,
+                border-color 180ms ease;
+}
+
+button.srkr-host-delete-close:hover {
+    background: rgba(34, 199, 240, 0.12);
+    border-color: rgba(34, 199, 240, 0.35);
+}
+
+/* Clear, premium destructive-action button */
+button.srkr-host-delete-confirm {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 14px;
+    padding: 11px 14px;
+
+    border: 1px solid rgba(248, 113, 113, 0.40);
+    border-radius: 11px;
+
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+
+    transition: transform 180ms ease,
+                box-shadow 180ms ease,
+                background 180ms ease;
+}
+
+button.srkr-host-delete-confirm:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 8px 22px rgba(220, 38, 38, 0.22);
+    transform: translateY(-1px);
+}
+
+button.srkr-host-delete-confirm:focus-visible,
+button.srkr-host-delete-close:focus-visible {
+    outline: 2px solid #22c7f0;
+    outline-offset: 3px;
+}
+
+button.srkr-host-delete-confirm:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+/* Prevent mobile browser input zoom */
+@media (max-width: 600px) {
+    .srkr-host-delete-password {
+        font-size: 16px;
+    }
+}
