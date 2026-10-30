@@ -21321,6 +21321,235 @@ if (qrStartLocation) {
 
 initializeMap();
 
+/* ==========================================
+   SRKR GO — LIVE WEATHER EFFECTS
+   Uses Open-Meteo current weather data.
+========================================== */
+
+(function initSRKRWeather() {
+    "use strict";
+
+    const mapContainer = document.getElementById("map");
+
+    // Fail safely if the map did not initialize.
+    if (!mapContainer || typeof L === "undefined") {
+        return;
+    }
+
+    // Prevent duplicate widgets if this code is initialized twice.
+    if (mapContainer.querySelector(".srkr-weather-widget")) {
+        return;
+    }
+
+    const weatherLayer = document.createElement("div");
+    weatherLayer.className = "srkr-weather-rain";
+    weatherLayer.setAttribute("aria-hidden", "true");
+
+    const widget = document.createElement("div");
+    widget.className = "srkr-weather-widget";
+
+    const weatherLabel = document.createElement("span");
+    weatherLabel.className = "srkr-weather-label";
+    weatherLabel.textContent = "🌦️ Checking weather…";
+
+    const toggleButton = document.createElement("button");
+    toggleButton.type = "button";
+    toggleButton.className = "srkr-weather-toggle";
+    toggleButton.setAttribute("aria-pressed", "true");
+
+    let effectsEnabled = true;
+    let isRainy = false;
+    let lastWeatherCode = null;
+
+    const reducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+    );
+
+    // Remember the user's effects preference when browser storage works.
+    try {
+        effectsEnabled =
+            localStorage.getItem("srkrWeatherEffects") !== "off";
+    } catch (error) {
+        // Storage is optional.
+    }
+
+    function updateToggle() {
+        toggleButton.textContent =
+            effectsEnabled ? "Effects: On" : "Effects: Off";
+
+        toggleButton.setAttribute(
+            "aria-pressed",
+            String(effectsEnabled)
+        );
+
+        weatherLayer.classList.toggle(
+            "is-active",
+            isRainy && effectsEnabled && !reducedMotion.matches
+        );
+    }
+
+    function createRaindrops() {
+        weatherLayer.replaceChildren();
+
+        // A small number of drops keeps the animation lightweight.
+        const dropCount =
+            lastWeatherCode === 65 ||
+            lastWeatherCode === 82 ||
+            lastWeatherCode >= 95
+                ? 34
+                : 22;
+
+        for (let i = 0; i < dropCount; i++) {
+            const drop = document.createElement("span");
+            drop.className = "srkr-weather-drop";
+
+            drop.style.left = `${Math.random() * 100}%`;
+            drop.style.animationDuration =
+                `${1.0 + Math.random() * 1.1}s`;
+            drop.style.animationDelay =
+                `${-Math.random() * 2.1}s`;
+            drop.style.opacity =
+                String(0.25 + Math.random() * 0.4);
+
+            weatherLayer.appendChild(drop);
+        }
+    }
+
+    function describeWeather(code, precipitation) {
+        if (code === 0) return "Clear sky";
+        if (code === 1) return "Mostly clear";
+        if (code === 2) return "Partly cloudy";
+        if (code === 3) return "Cloudy";
+
+        if (code >= 45 && code <= 48) return "Foggy";
+        if (code >= 51 && code <= 57) return "Drizzle";
+        if (code >= 61 && code <= 67) return "Rain";
+        if (code >= 71 && code <= 77) return "Snow";
+        if (code >= 80 && code <= 82) return "Rain showers";
+        if (code >= 95 && code <= 99) return "Thunderstorm";
+
+        if (precipitation > 0) return "Precipitation";
+        return "Current conditions";
+    }
+
+    function applyWeather(code, precipitation) {
+        lastWeatherCode = Number(code);
+
+        const isPrecipitationWeather =
+            (lastWeatherCode >= 51 && lastWeatherCode <= 67) ||
+            (lastWeatherCode >= 80 && lastWeatherCode <= 82) ||
+            (lastWeatherCode >= 95 && lastWeatherCode <= 99);
+
+        isRainy = isPrecipitationWeather;
+
+        const description = describeWeather(
+            lastWeatherCode,
+            Number(precipitation) || 0
+        );
+
+        weatherLabel.textContent = `🌦️ SRKR · ${description}`;
+
+        if (isRainy) {
+            createRaindrops();
+        } else {
+            weatherLayer.replaceChildren();
+        }
+
+        updateToggle();
+    }
+
+    toggleButton.addEventListener("click", function (event) {
+        // Don't let the toggle trigger Leaflet map-click handlers.
+        if (L.DomEvent) {
+            L.DomEvent.stopPropagation(event);
+        }
+
+        effectsEnabled = !effectsEnabled;
+
+        try {
+            localStorage.setItem(
+                "srkrWeatherEffects",
+                effectsEnabled ? "on" : "off"
+            );
+        } catch (error) {
+            // The toggle still works for this page session.
+        }
+
+        updateToggle();
+    });
+
+    widget.append(weatherLabel, toggleButton);
+    mapContainer.append(weatherLayer, widget);
+
+    // Keep clicks and scrolls on the widget separate from map gestures.
+    if (L.DomEvent) {
+        L.DomEvent.disableClickPropagation(widget);
+        L.DomEvent.disableScrollPropagation(widget);
+    }
+
+    updateToggle();
+
+    async function refreshWeather() {
+        if (document.visibilityState !== "visible") {
+            return;
+        }
+
+        const url =
+            "https://api.open-meteo.com/v1/forecast" +
+            "?latitude=16.543" +
+            "&longitude=81.497" +
+            "&current=precipitation,weather_code" +
+            "&timezone=Asia%2FKolkata";
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Weather request failed");
+            }
+
+            const data = await response.json();
+            const current = data && data.current;
+
+            if (
+                !current ||
+                current.weather_code === undefined
+            ) {
+                throw new Error("Current weather unavailable");
+            }
+
+            applyWeather(
+                current.weather_code,
+                current.precipitation
+            );
+        } catch (error) {
+            // A weather failure must never affect campus navigation.
+            isRainy = false;
+            weatherLayer.replaceChildren();
+            weatherLabel.textContent = "🌦️ Weather unavailable";
+            updateToggle();
+
+            console.warn(
+                "SRKR Go: live weather could not be loaded.",
+                error
+            );
+        }
+    }
+
+    reducedMotion.addEventListener?.("change", updateToggle);
+
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") {
+            refreshWeather();
+           
+        }
+    });
+
+    refreshWeather();
+    // Weather changes slowly; avoid repeatedly calling the API.
+    window.setInterval(refreshWeather, 15 * 60 * 1000);
+})();
+
 
 /* =========================================================
    42. 👨‍🏫 FACULTY FINDER — PROTOTYPE  (unchanged)
