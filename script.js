@@ -27598,7 +27598,57 @@ quickFacilitiesOverlay.innerHTML = `
             →
         </span>
              </button>
+<button
+    type="button"
+    class="quick-facility-option"
+    data-facility="canteen"
+>
+    <span class="quick-facility-icon">🍽️</span>
+    <span class="quick-facility-content">
+        <strong>Canteen</strong>
+        <small>Navigate to the canteen entrance</small>
+    </span>
+    <span class="quick-facility-arrow">→</span>
+</button>
 
+<button
+    type="button"
+    class="quick-facility-option"
+    data-facility="library"
+>
+    <span class="quick-facility-icon">📚</span>
+    <span class="quick-facility-content">
+        <strong>Library</strong>
+        <small>Navigate to the library entrance</small>
+    </span>
+    <span class="quick-facility-arrow">→</span>
+</button>
+
+<button
+    type="button"
+    class="quick-facility-option"
+    data-facility="parking"
+>
+    <span class="quick-facility-icon">🅿️</span>
+    <span class="quick-facility-content">
+        <strong>Parking</strong>
+        <small>Find the nearest mapped parking area</small>
+    </span>
+    <span class="quick-facility-arrow">→</span>
+</button>
+
+<button
+    type="button"
+    class="quick-facility-option"
+    data-facility="firstaid"
+>
+    <span class="quick-facility-icon">🩹</span>
+    <span class="quick-facility-content">
+        <strong>First Aid</strong>
+        <small>Find a mapped first-aid location</small>
+    </span>
+    <span class="quick-facility-arrow">→</span>
+</button>
         </div> <!-- closes quick-facilities-options -->
     </div> <!-- closes quick-facilities-panel -->
 `;
@@ -27752,6 +27802,7 @@ function normalizeQuickFacilityPosition(position) {
    4. IDENTIFY THE REQUESTED FACILITY
    --------------------------------------------------------- */
 
+
 function quickFacilityMatchesText(kind, value) {
     const text = String(value ?? "");
 
@@ -27764,15 +27815,28 @@ function quickFacilityMatchesText(kind, value) {
         );
     }
 
+    if (kind === "canteen") {
+        return /\b(?:canteen|cafeteria|food\s*court)\b/i.test(text);
+    }
+
+    if (kind === "library") {
+        return /\b(?:library|libraries)\b/i.test(text);
+    }
+
+    if (kind === "parking") {
+        return /\b(?:parking|vehicle\s*park(?:ing)?|parking\s*area)\b/i.test(text);
+    }
+
+    if (kind === "firstaid") {
+    return /\b(?:first\s*aid|dispensary|medical\s*room|health\s*centre|health\s*center|campus\s*clinic)\b/i.test(text);
+}
+
     const isRestroom =
         /\b(?:washrooms?|toilets?|restrooms?|lavatories|lavatory|loos?)\b/i
             .test(text);
 
-    // Do not send students to staff-only washrooms.
-    if (
-        !isRestroom ||
-        /\bstaff\b/i.test(text)
-    ) {
+    // Never direct students to staff-only washrooms.
+    if (!isRestroom || /\bstaff\b/i.test(text)) {
         return false;
     }
 
@@ -27790,17 +27854,28 @@ function quickFacilityMatchesText(kind, value) {
 }
 
 
+
+
 function quickFacilityLabelFromText(kind, value) {
+    const text = String(value ?? "");
+
     if (kind === "water") {
         return /water\s*(?:bottle\s*)?refill|refill\s*units?|water\s*dispenser/i
-            .test(String(value ?? ""))
+            .test(text)
             ? "Water Refill Unit"
             : "Drinking Water";
     }
 
-    return kind === "boys"
-        ? "Boys Washroom"
-        : "Girls Washroom";
+    const labels = {
+        boys: "Boys Washroom",
+        girls: "Girls Washroom",
+        canteen: "Canteen",
+        library: "Library",
+        parking: "Parking",
+        firstaid: "First Aid"
+    };
+
+    return labels[kind] || "Campus Facility";
 }
 
 
@@ -28004,9 +28079,20 @@ function addQuickFacilityCandidate(
 
 function getNearestQuickFacility(kind, userPosition) {
     const position =
-        normalizeQuickFacilityPosition(userPosition);
+    normalizeQuickFacilityPosition(userPosition);
 
-    if (!position || !["water", "boys", "girls"].includes(kind)) {
+if (
+        !position ||
+        ![
+            "water",
+            "boys",
+            "girls",
+            "canteen",
+            "library",
+            "parking",
+            "firstaid"
+        ].includes(kind)
+    ) {
         return null;
     }
 
@@ -28018,6 +28104,8 @@ function getNearestQuickFacility(kind, userPosition) {
         return null;
     }
 
+
+
     const candidates = [];
     const destinationPositionCache = new Map();
 
@@ -28027,9 +28115,12 @@ function getNearestQuickFacility(kind, userPosition) {
     /* A. Search exact mapped facility pins. */
     Object.entries(campusLocations).forEach(
         function ([id, location]) {
-            if (!location || location.type !== "point") {
-                return;
-            }
+            if (
+    !location ||
+    !["point", "area"].includes(location.type)
+) {
+    return;
+}
 
             const searchableText = [
                 id.replace(/-/g, " "),
@@ -28056,7 +28147,7 @@ function getNearestQuickFacility(kind, userPosition) {
                             searchableText
                         ),
                     floorLabel: "Exact mapped facility pin",
-                    exactPoint: true,
+                    exactPoint: location.type === "point",
                     qualityRank: 0,
                     refillSpecific:
                         kind === "water" &&
@@ -28429,10 +28520,14 @@ function findAndNavigateQuickFacility(
 
     if (!nearest) {
         const names = {
-            water: "water refill or drinking-water facility",
-            boys: "boys washroom",
-            girls: "girls washroom"
-        };
+    water: "water refill or drinking-water facility",
+    boys: "boys washroom",
+    girls: "girls washroom",
+    canteen: "canteen",
+    library: "library",
+    parking: "parking area",
+    firstaid: "first-aid or medical facility"
+};
 
         showQuickFacilityStatus(
             `⚠️ <strong>No verified ${names[kind]} was found.</strong><br>` +
@@ -28688,7 +28783,29 @@ quickFacilitiesOverlay
             startNearestQuickFacilitySearch("girls");
         }
     );
+quickFacilitiesOverlay
+    .querySelector('[data-facility="canteen"]')
+    .addEventListener("click", function () {
+        startNearestQuickFacilitySearch("canteen");
+    });
 
+quickFacilitiesOverlay
+    .querySelector('[data-facility="library"]')
+    .addEventListener("click", function () {
+        startNearestQuickFacilitySearch("library");
+    });
+
+quickFacilitiesOverlay
+    .querySelector('[data-facility="parking"]')
+    .addEventListener("click", function () {
+        startNearestQuickFacilitySearch("parking");
+    });
+
+quickFacilitiesOverlay
+    .querySelector('[data-facility="firstaid"]')
+    .addEventListener("click", function () {
+        startNearestQuickFacilitySearch("firstaid");
+    });
 /* =========================================================
    ESCAPE KEY
    ========================================================= */
