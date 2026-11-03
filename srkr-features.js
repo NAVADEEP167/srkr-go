@@ -5070,6 +5070,32 @@ window.openFeaturePanel = openFeaturePanel;
 
         }
     );
+    /* =========================================================
+   CAMPUS EXPLORER 2D — MAP BLOCK SELECTION
+   ---------------------------------------------------------
+   Reuses the existing Block Information panel and
+   existing floor directory. No duplicate block data.
+   ========================================================= */
+
+document.addEventListener(
+    "srkr:campus-block-selected",
+    function (event) {
+        const blockId =
+            event.detail?.blockId;
+
+        if (
+            typeof blockId !== "string" ||
+            !blockId ||
+            typeof getBlockFloorData !== "function" ||
+            !getBlockFloorData(blockId)
+        ) {
+            return;
+        }
+
+        openFeaturePanel("block-info");
+        openBlockInformation(blockId);
+    }
+);
 /* =========================================================
    RECENT DESTINATION TRACKER
    ---------------------------------------------------------
