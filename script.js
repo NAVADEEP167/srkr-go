@@ -21196,7 +21196,33 @@ function drawCampusLocation(id, location) {
     <strong>📍 ${location.name}</strong><br><small>${location.category}</small>${extra}</div>`);
 
 markers[id] = polygon;
+/*
+ * CAMPUS EXPLORER 2D
+ * Open Block Information when a supported
+ * campus building polygon is clicked.
+ */
 
+polygon.on("click", function () {
+    if (
+        typeof getBlockFloorData !== "function" ||
+        !getBlockFloorData(id)
+    ) {
+        return;
+    }
+
+    polygon.closePopup();
+
+    document.dispatchEvent(
+        new CustomEvent(
+            "srkr:campus-block-selected",
+            {
+                detail: {
+                    blockId: id
+                }
+            }
+        )
+    );
+});
 const centerPosition =
     getDestinationPosition(location);
 
