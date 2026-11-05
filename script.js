@@ -29528,7 +29528,8 @@ document.addEventListener(
 
     let centerX = 0;
     let centerY = 0;
-
+    let baseCenterX = 0;
+    let baseCenterY = 0;
     let stars = [];
 
     let animationFrame = null;
@@ -29611,12 +29612,11 @@ const dpr = 1;
         );
 
 
-        centerX =
-            width * 0.5;
+                baseCenterX = width * 0.5;
+        baseCenterY = height * 0.48;
 
-        centerY =
-            height * 0.48;
-
+        centerX = baseCenterX;
+        centerY = baseCenterY;
 
         createStars();
 
@@ -29918,7 +29918,12 @@ speed:
         lastTime =
             now;
 
+        const parallax = window.srkrParallax;
 
+        if (parallax) {
+            centerX = baseCenterX + parallax.x * width * 0.05;
+            centerY = baseCenterY + parallax.y * height * 0.04;
+        }
         ctx.clearRect(
             0,
             0,

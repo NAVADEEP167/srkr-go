@@ -26,8 +26,6 @@
 <link rel="stylesheet" href="srkr-features.css">
 
 
-
-
     <!-- LEAFLET CSS -->
 
     <link
@@ -35,33 +33,6 @@
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
 
-
-<script>
-try {
-    if (
-        window.localStorage.getItem(
-            "srkrGoWelcomeSeen"
-        ) === "true"
-    ) {
-        document.documentElement.classList.add(
-            "srkr-go-welcome-seen"
-        );
-    }
-} catch (error) {
-    // Continue normally if browser storage is unavailable.
-}
-</script>
-
-<style>
-html.srkr-go-welcome-seen #srkrWelcome {
-    display: none !important;
-}
-
-html.srkr-go-welcome-seen:has(#srkrWelcome:not(.is-closing)),
-html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
-    overflow-y: auto !important;
-}
-</style>
 
 </head>
 
@@ -79,7 +50,14 @@ html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
     aria-modal="true"
     aria-labelledby="srkrWelcomeTitle"
 >
-
+<div class="srkr-welcome-parallax" aria-hidden="true">
+    <span class="px-orb px-orb-a" data-px="46"></span>
+    <span class="px-orb px-orb-b" data-px="-38"></span>
+    <span class="px-pin px-pin-a" data-px="26">📍</span>
+    <span class="px-pin px-pin-b" data-px="-34">🧭</span>
+    <span class="px-pin px-pin-c" data-px="20">🏫</span>
+    <span class="px-pin px-pin-d" data-px="-24">🎓</span>
+</div>
     <div class="srkr-welcome-card">
 
         <!-- TOP BRAND -->
@@ -776,6 +754,7 @@ html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="script.js"></script>
 <script src="srkr-features.js"></script>
+<script src="parallax.js"></script>
 <script>
 /* SRKR GO — WELCOME SCREEN */
 (function () {
@@ -784,24 +763,7 @@ html.srkr-go-welcome-seen body:has(#srkrWelcome:not(.is-closing)) {
 
     if (!welcomeScreen || !startButton) return;
 
-    try {
-        if (
-            window.localStorage.getItem("srkrGoWelcomeSeen") === "true"
-        ) {
-            welcomeScreen.remove();
-            return;
-        }
-    } catch (error) {
-        // Continue if browser storage is unavailable.
-    }
-
     startButton.addEventListener("click", function () {
-        try {
-            window.localStorage.setItem("srkrGoWelcomeSeen", "true");
-        } catch (error) {
-            // Continue even if saving is unavailable.
-        }
-
         welcomeScreen.classList.add("is-closing");
 
         window.setTimeout(function () {

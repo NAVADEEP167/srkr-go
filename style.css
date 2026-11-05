@@ -21190,3 +21190,93 @@ button.srkr-host-delete-confirm:disabled {
         padding: 5px 6px;
     }
 }
+/* =========================================================
+   SRKR GO — PARALLAX LAYER
+   Uses the individual `translate` property so it never
+   conflicts with existing `transform` rules.
+========================================================= */
+
+.srkr-welcome-parallax {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.srkr-welcome-card {
+    z-index: 1;
+}
+
+.px-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(42px);
+    will-change: translate;
+}
+
+.px-orb-a {
+    width: 260px;
+    height: 260px;
+    top: 6%;
+    left: -8%;
+    background: rgba(99, 102, 241, 0.30);
+}
+
+.px-orb-b {
+    width: 230px;
+    height: 230px;
+    bottom: 4%;
+    right: -6%;
+    background: rgba(34, 211, 238, 0.17);
+}
+
+.px-pin {
+    position: absolute;
+    font-size: 24px;
+    opacity: 0.55;
+    filter: drop-shadow(0 0 10px rgba(139, 124, 255, 0.55));
+    will-change: translate;
+    animation: pxFloat 6s ease-in-out infinite;
+}
+
+.px-pin-a { top: 14%; right: 12%; }
+.px-pin-b { bottom: 18%; left: 10%; animation-delay: -2s; }
+.px-pin-c { top: 40%; left: 5%; font-size: 20px; animation-delay: -4s; }
+.px-pin-d { bottom: 34%; right: 7%; font-size: 20px; animation-delay: -1s; }
+
+@keyframes pxFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-9px); }
+}
+
+/* Layers moved by parallax.js */
+.glow-one,
+.glow-two,
+.header-decoration,
+.header-route-line,
+.srkr-logo-orbit,
+.srkr-welcome-card {
+    will-change: translate;
+}
+
+/* Motion on/off toggle (inside the footer) */
+.px-toggle {
+    margin-top: 12px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #a1a1aa;
+    font: 700 11px/1 inherit;
+    cursor: pointer;
+}
+
+.px-toggle:hover {
+    border-color: rgba(139, 124, 255, 0.35);
+    color: #e4e4e7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .px-pin { animation: none; }
+}
