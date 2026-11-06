@@ -32,7 +32,7 @@
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
-
+<link rel="stylesheet" href="user-manual.css">
 
 </head>
 
@@ -178,7 +178,25 @@
             </span>
 
         </div>
+<!-- USER MANUAL -->
 
+<button
+    type="button"
+    id="srkrOpenManual"
+    class="srkr-welcome-manual"
+    aria-haspopup="dialog"
+    aria-controls="srkrUserManual"
+>
+    <span class="srkr-manual-button-icon" aria-hidden="true">
+        📖
+    </span>
+
+    <span>User Manual</span>
+
+    <span class="srkr-manual-button-arrow" aria-hidden="true">
+        ↗
+    </span>
+</button>
 
         <!-- START -->
 
@@ -205,6 +223,448 @@
 
     </div>
 
+</div>
+<!-- =========================================================
+     SRKR GO — USER MANUAL PANEL
+========================================================= -->
+
+<section
+    id="srkrUserManual"
+    class="srkr-manual-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="srkrManualTitle"
+    aria-describedby="srkrManualIntro"
+    hidden
+>
+
+    <!-- BACKDROP -->
+
+    <div
+        class="srkr-manual-backdrop"
+        data-manual-close
+    ></div>
+
+
+    <!-- MANUAL PANEL -->
+
+    <div class="srkr-manual-panel" role="document">
+
+        <!-- HEADER -->
+
+        <header class="srkr-manual-header">
+
+            <div class="srkr-manual-heading-wrap">
+
+                <span class="srkr-manual-eyebrow">
+                    SRKR GO • QUICK GUIDE
+                </span>
+
+                <h2 id="srkrManualTitle">
+                    User Manual
+                </h2>
+
+                <p id="srkrManualIntro">
+                    A simple guide to finding places
+                    and exploring SRKR campus.
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                class="srkr-manual-close"
+                id="srkrCloseManual"
+                aria-label="Close user manual"
+            >
+                ×
+            </button>
+
+        </header>
+
+
+        <!-- SECTION NAVIGATION -->
+
+        <nav
+            class="srkr-manual-nav"
+            aria-label="User manual sections"
+        >
+
+            <a href="#srkrManualNavigation">
+                Navigation
+            </a>
+
+            <a href="#srkrManualFeatures">
+                Features
+            </a>
+
+            <a href="#srkrManualLocation">
+                Location tips
+            </a>
+
+        </nav>
+
+
+        <!-- MANUAL CONTENT -->
+
+        <div
+            class="srkr-manual-content"
+            id="srkrManualContent"
+            tabindex="0"
+        >
+
+            <!-- SECTION 1 -->
+
+            <section
+                class="srkr-manual-section"
+                id="srkrManualNavigation"
+            >
+
+                <div class="srkr-manual-section-title">
+
+                    <span class="srkr-manual-section-icon">
+                        🧭
+                    </span>
+
+                    <div>
+                        <h3>1. Find a destination</h3>
+                        <p>Use the main navigation card.</p>
+                    </div>
+
+                </div>
+
+
+                <ol class="srkr-manual-steps">
+
+                    <li>
+                        <strong>Search for a place.</strong>
+                        Type a building, classroom, facility
+                        or campus location in the search box.
+                        You can also choose a destination
+                        from the category list below it.
+                    </li>
+
+                    <li>
+                        <strong>Choose your destination.</strong>
+                        Select the matching suggestion
+                        or dropdown option.
+                    </li>
+
+                    <li>
+                        <strong>Get your location.</strong>
+                        Tap <b>Use My Location</b>.
+                        If your browser asks for location
+                        permission, allow it so SRKR Go
+                        can use your current position.
+                    </li>
+
+                    <li>
+                        <strong>Start the route.</strong>
+                        Tap <b>Find My Route</b> to request
+                        directions to the selected destination.
+                    </li>
+
+                    <li>
+                        <strong>Follow the map.</strong>
+                        Use the displayed route and
+                        navigation guidance to move
+                        towards your destination.
+                    </li>
+
+                </ol>
+
+
+                <div class="srkr-manual-note">
+
+                    <strong>Tip:</strong>
+                    Select a destination before requesting
+                    a route. Location access is needed
+                    for features that use your current position.
+
+                </div>
+
+            </section>
+
+
+            <!-- SECTION 2 -->
+
+            <section
+                class="srkr-manual-section"
+                id="srkrManualFeatures"
+            >
+
+                <div class="srkr-manual-section-title">
+
+                    <span class="srkr-manual-section-icon">
+                        ✨
+                    </span>
+
+                    <div>
+                        <h3>2. Explore SRKR Go features</h3>
+                        <p>
+                            Open a feature from the feature
+                            launcher below the map.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <div class="srkr-manual-feature-list">
+
+                    <article>
+                        <span>📍</span>
+
+                        <div>
+                            <h4>What's Near Me</h4>
+                            <p>
+                                Find useful places around your
+                                current location. Location access
+                                and confirmation that you are
+                                inside the campus are required
+                                to show nearby results.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🧭</span>
+
+                        <div>
+                            <h4>Explore Campus</h4>
+                            <p>
+                                Browse campus places by category
+                                and discover locations.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🏢</span>
+
+                        <div>
+                            <h4>Block Info</h4>
+                            <p>
+                                View available information
+                                about campus blocks.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🔎</span>
+
+                        <div>
+                            <h4>Find Classroom</h4>
+                            <p>
+                                Search for classrooms and rooms
+                                in the campus directory.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🎓</span>
+
+                        <div>
+                            <h4>Freshers Mode</h4>
+                            <p>
+                                Use the starter guide to find
+                                places that new students
+                                commonly need.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>⭐</span>
+
+                        <div>
+                            <h4>Favorites</h4>
+                            <p>
+                                Keep frequently used places handy.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🕘</span>
+
+                        <div>
+                            <h4>Recent</h4>
+                            <p>
+                                Quickly return to destinations
+                                you have navigated to recently.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>🚧</span>
+
+                        <div>
+                            <h4>Campus Alerts</h4>
+                            <p>
+                                Check important temporary
+                                campus information.
+                            </p>
+                        </div>
+                    </article>
+
+
+                    <article>
+                        <span>📸</span>
+
+                        <div>
+                            <h4>GO FAN</h4>
+                            <p>
+                                Share your SRKR campus moments.
+                            </p>
+                        </div>
+                    </article>
+
+                </div>
+
+            </section>
+
+
+            <!-- SECTION 3 -->
+
+            <section
+                class="srkr-manual-section"
+                id="srkrManualLocation"
+            >
+
+                <div class="srkr-manual-section-title">
+
+                    <span class="srkr-manual-section-icon">
+                        📡
+                    </span>
+
+                    <div>
+                        <h3>3. Location and access tips</h3>
+                        <p>
+                            For location-based features
+                            to work smoothly.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <ul class="srkr-manual-tips">
+
+                    <li>
+                        Allow location access when your
+                        browser asks for it.
+                    </li>
+
+                    <li>
+                        Keep your device location service
+                        enabled while using current-location
+                        features.
+                    </li>
+
+                    <li>
+                        If your position is not detected
+                        correctly, move to a place with a
+                        clearer GPS signal and try again.
+                    </li>
+
+                    <li>
+                        What's Near Me checks that you are
+                        inside SRKR campus before displaying
+                        nearby places.
+                    </li>
+
+                </ul>
+
+            </section>
+
+        </div>
+
+
+        <!-- FOOTER -->
+
+        <footer class="srkr-manual-footer">
+
+            <span>
+                SRKR Go • Smart Campus Navigation
+            </span>
+
+            <button
+                type="button"
+                id="srkrManualDone"
+                class="srkr-manual-done"
+            >
+                Got it
+            </button>
+
+        </footer>
+
+
+
+    </div>
+
+</section>
+<!-- FIRST-TIME USER MANUAL CHECKPOINT -->
+<div
+    id="srkrManualCheckpoint"
+    class="srkr-checkpoint-overlay"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="srkrCheckpointTitle"
+    aria-describedby="srkrCheckpointDescription"
+    hidden
+>
+    <div class="srkr-checkpoint-backdrop"></div>
+
+    <div class="srkr-checkpoint-card">
+        <div class="srkr-checkpoint-icon">📖</div>
+
+        <span class="srkr-checkpoint-eyebrow">WELCOME TO SRKR GO</span>
+
+        <h2 id="srkrCheckpointTitle">One quick step before exploring!</h2>
+
+        <p id="srkrCheckpointDescription">
+            Since this is your first visit, please open the User Manual
+            to understand how SRKR Go works and how to navigate the campus.
+        </p>
+
+        <label class="srkr-checkpoint-consent">
+            <input
+                type="checkbox"
+                id="srkrManualAcknowledgement"
+            >
+            <span>
+                I understand. I will read the User Manual before exploring.
+            </span>
+        </label>
+
+        <button
+            type="button"
+            id="srkrCheckpointOpenManual"
+            class="srkr-checkpoint-primary"
+            disabled
+        >
+            Read User Manual →
+        </button>
+
+        <button
+            type="button"
+            id="srkrCheckpointCancel"
+            class="srkr-checkpoint-secondary"
+        >
+            Go Back
+        </button>
+    </div>
 </div>
     <canvas
     id="srkrSpaceCanvas"
@@ -755,22 +1215,97 @@
 <script src="script.js"></script>
 <script src="srkr-features.js"></script>
 <script src="parallax.js"></script>
+<script src="user-manual.js"></script>
 <script>
-/* SRKR GO — WELCOME SCREEN */
+
+/* =========================================================
+   SRKR GO — FIRST-TIME USER ONBOARDING
+========================================================= */
+
 (function () {
+    "use strict";
+
     const welcomeScreen = document.getElementById("srkrWelcome");
     const startButton = document.getElementById("srkrStartButton");
+    const openManualButton = document.getElementById("srkrOpenManual");
 
-    if (!welcomeScreen || !startButton) return;
+    const checkpoint = document.getElementById("srkrManualCheckpoint");
+    const acknowledgement = document.getElementById("srkrManualAcknowledgement");
+    const checkpointOpenButton = document.getElementById("srkrCheckpointOpenManual");
+    const checkpointCancelButton = document.getElementById("srkrCheckpointCancel");
 
-    startButton.addEventListener("click", function () {
+    if (
+        !welcomeScreen ||
+        !startButton ||
+        !openManualButton ||
+        !checkpoint ||
+        !acknowledgement ||
+        !checkpointOpenButton ||
+        !checkpointCancelButton
+    ) return;
+
+    const STORAGE_KEY = "srkrGoManualOpened_v1";
+
+    function hasOpenedManual() {
+        try {
+            return localStorage.getItem(STORAGE_KEY) === "true";
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function closeCheckpoint() {
+        checkpoint.hidden = true;
+        acknowledgement.checked = false;
+        checkpointOpenButton.disabled = true;
+        startButton.focus();
+    }
+
+    function showCheckpoint() {
+        checkpoint.hidden = false;
+        acknowledgement.checked = false;
+        checkpointOpenButton.disabled = true;
+        acknowledgement.focus();
+    }
+
+    function launchExplore() {
         welcomeScreen.classList.add("is-closing");
 
         window.setTimeout(function () {
             welcomeScreen.remove();
         }, 260);
+    }
+
+    // Let's Explore
+    startButton.addEventListener("click", function () {
+        if (!hasOpenedManual()) {
+            showCheckpoint();
+            return;
+        }
+
+        launchExplore();
     });
+
+    // Enable the manual button only after acknowledgement.
+    acknowledgement.addEventListener("change", function () {
+        checkpointOpenButton.disabled = !acknowledgement.checked;
+    });
+
+    // Open the actual User Manual.
+    checkpointOpenButton.addEventListener("click", function () {
+        if (!acknowledgement.checked) return;
+
+        checkpoint.hidden = true;
+
+        // Use the existing manual button and its existing event handler.
+        openManualButton.click();
+    });
+
+    // Return to the welcome card.
+    checkpointCancelButton.addEventListener("click", closeCheckpoint);
+
 })();
+
 </script>
 
 
