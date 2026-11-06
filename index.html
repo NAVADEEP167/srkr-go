@@ -1173,9 +1173,15 @@
 
                 Designed &amp; Developed by
 
-                <strong>
-                    KOTHAPALLI NAVADEEP KUMAR
-                </strong>
+                <button
+    type="button"
+    id="developerProfileButton"
+    class="developer-profile-trigger"
+    aria-haspopup="dialog"
+    aria-controls="developerSocialModal"
+>
+    KOTHAPALLI NAVADEEP KUMAR
+</button>
 
             </p>
 
@@ -1202,7 +1208,76 @@
 
     </footer>
 
+<!-- DEVELOPER SOCIAL PROFILE MODAL -->
 
+<div
+    id="developerSocialModal"
+    class="developer-social-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="developerSocialTitle"
+    hidden
+>
+    <div class="developer-social-backdrop"></div>
+
+    <div class="developer-social-card">
+
+        <button
+            type="button"
+            id="developerSocialClose"
+            class="developer-social-close"
+            aria-label="Close"
+        >
+            ×
+        </button>
+
+        <span class="developer-social-eyebrow">
+            SRKR GO • DEVELOPER
+        </span>
+
+        <h2 id="developerSocialTitle">
+            Let's Connect
+        </h2>
+
+        <p>
+            Choose your preferred platform
+            to connect with me.
+        </p>
+
+        <a
+            href="https://www.instagram.com/_orewa_light_167/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="developer-social-link instagram-link"
+        >
+            <span>📸</span>
+            <span>
+                <strong>Instagram</strong>
+                <small>Follow my updates</small>
+            </span>
+            <span class="social-arrow">↗</span>
+        </a>
+
+        <a
+            href="https://www.linkedin.com/in/kothapalli-navadeep-kumar-99988342b/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="developer-social-link linkedin-link"
+        >
+            <span>💼</span>
+            <span>
+                <strong>LinkedIn</strong>
+                <small>Connect professionally</small>
+            </span>
+            <span class="social-arrow">↗</span>
+        </a>
+
+        <div class="developer-social-footer">
+            Thanks for exploring SRKR Go!
+        </div>
+
+    </div>
+</div>
     <!-- LEAFLET JS -->
 
     <script
@@ -1308,7 +1383,52 @@
 
 </script>
 
+<script>
+(function () {
+    "use strict";
 
+    const trigger = document.getElementById(
+        "developerProfileButton"
+    );
+
+    const modal = document.getElementById(
+        "developerSocialModal"
+    );
+
+    const closeButton = document.getElementById(
+        "developerSocialClose"
+    );
+
+    if (!trigger || !modal || !closeButton) return;
+
+    const backdrop = modal.querySelector(
+        ".developer-social-backdrop"
+    );
+
+    function openModal() {
+        modal.hidden = false;
+        closeButton.focus();
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        trigger.focus();
+    }
+
+    trigger.addEventListener("click", openModal);
+
+    closeButton.addEventListener("click", closeModal);
+
+    backdrop.addEventListener("click", closeModal);
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.hidden) {
+            closeModal();
+        }
+    });
+
+})();
+</script>
 </body>
 
 </html>
