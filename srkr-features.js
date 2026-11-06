@@ -430,6 +430,13 @@ document.documentElement.classList.add(
 document.body.classList.add(
     "srkr-feature-scroll-lock"
 );
+document.dispatchEvent(
+    new CustomEvent("srkr:feature-opened", {
+        detail: {
+            featureId: activeFeatureId
+        }
+    })
+);
     }
 
 
@@ -456,7 +463,9 @@ document.body.classList.add(
 
         activeFeatureId = null;
 
-
+document.dispatchEvent(
+    new CustomEvent("srkr:feature-closed")
+);
         document.body.classList.remove(
     "srkr-feature-modal-open"
 );
@@ -5046,6 +5055,10 @@ function renderGoFan() {
 window.SRKRFeatures = {
     open: openFeaturePanel,
     close: closeFeaturePanel,
+
+    getActiveId: function () {
+        return activeFeatureId;
+    },
 
     getFeatures: function () {
         return SRKR_FEATURES.slice();

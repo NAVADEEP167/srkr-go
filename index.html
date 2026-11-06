@@ -1291,6 +1291,7 @@
 <script src="srkr-features.js"></script>
 <script src="parallax.js"></script>
 <script src="user-manual.js"></script>
+<script src="srkr-app-navigation.js"></script>
 <script>
 
 /* =========================================================
@@ -1406,14 +1407,42 @@
     );
 
     function openModal() {
-        modal.hidden = false;
-        closeButton.focus();
-    }
+    if (!modal.hidden) return;
 
-    function closeModal() {
-        modal.hidden = true;
-        trigger.focus();
-    }
+    modal.hidden = false;
+    closeButton.focus();
+
+    document.dispatchEvent(
+        new CustomEvent("srkr:popup-opened", {
+            detail: {
+                popupId: "developer"
+            }
+        })
+    );
+}
+
+function closeModal() {
+    if (modal.hidden) return;
+
+    modal.hidden = true;
+    trigger.focus();
+
+    document.dispatchEvent(
+        new CustomEvent("srkr:popup-closed", {
+            detail: {
+                popupId: "developer"
+            }
+        })
+    );
+}
+
+window.SRKRDeveloperModal = {
+    isOpen: function () {
+        return !modal.hidden;
+    },
+
+    close: closeModal
+};
 
     trigger.addEventListener("click", openModal);
 

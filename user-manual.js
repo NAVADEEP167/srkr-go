@@ -74,7 +74,13 @@
 
 
             panel.hidden = false;
-
+document.dispatchEvent(
+    new CustomEvent("srkr:popup-opened", {
+        detail: {
+            popupId: "manual"
+        }
+    })
+);
             document.body.classList.add(
                 "srkr-manual-open"
             );
@@ -97,7 +103,13 @@
 
 
             panel.hidden = true;
-
+document.dispatchEvent(
+    new CustomEvent("srkr:popup-closed", {
+        detail: {
+            popupId: "manual"
+        }
+    })
+);
             document.body.classList.remove(
                 "srkr-manual-open"
             );
@@ -138,7 +150,13 @@
 
         }
 
+window.SRKRManual = {
+    isOpen: function () {
+        return !panel.hidden;
+    },
 
+    close: closeManual
+};
         /* =====================================================
            BUTTON EVENTS
         ===================================================== */

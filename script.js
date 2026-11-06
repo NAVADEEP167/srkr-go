@@ -5158,6 +5158,46 @@ const srkrNavigationStop =
     document.getElementById(
         "srkrNavigationStop"
     );
+/* =========================================================
+   SRKR GO — PUBLIC NAVIGATION CONTROL
+   Used by the browser Back controller.
+========================================================= */
+
+
+    window.SRKRNavigation = {
+    isActive: function () {
+        return navigationActive;
+    },
+
+    getDestinationId: function () {
+        return activeDestinationId;
+    },
+
+    stop: function () {
+        if (srkrNavigationStop) {
+            srkrNavigationStop.click();
+        }
+    },
+
+    resume: function (destinationId) {
+        if (!destinationId || !destinationSelect || !navigateButton) {
+            return false;
+        }
+
+        const destinationExists = Array.from(
+            destinationSelect.options
+        ).some(option => option.value === destinationId);
+
+        if (!destinationExists) {
+            return false;
+        }
+
+        destinationSelect.value = destinationId;
+        navigateButton.click();
+
+        return true;
+    }
+};
 
 
 function showNavigationPanel() {
