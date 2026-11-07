@@ -29571,8 +29571,9 @@ document.addEventListener(
     let baseCenterX = 0;
     let baseCenterY = 0;
     let stars = [];
+let dustParticles = [];
 
-    let animationFrame = null;
+let animationFrame = null;
 
     let lastTime = performance.now();
 
@@ -29658,7 +29659,8 @@ const dpr = 1;
         centerX = baseCenterX;
         centerY = baseCenterY;
 
-        createStars();
+                createStars();
+        createDustParticles();
 
     }
 
@@ -29712,7 +29714,126 @@ speed:
 
     }
 
+    /* LIGHT MODE — WARM DAYLIGHT PARTICLES */
 
+    function createDustParticles() {
+
+        dustParticles = [];
+
+        const count = Math.min(
+    150,
+    Math.max(
+        90,
+        Math.floor(
+            window.innerWidth *
+            window.innerHeight / 8500
+        )
+    )
+);
+
+        for (let i = 0; i < count; i++) {
+
+            dustParticles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+
+                radius: Math.random() * 2.5 + 1,
+
+speed: Math.random() * 0.28 + 0.10,
+
+drift: (Math.random() - 0.5) * 0.20,
+
+phase: Math.random() * Math.PI * 2,
+
+opacity: Math.random() * 0.42 + 0.28
+            });
+
+        }
+    }
+
+
+    function drawLightDust(now) {
+
+        ctx.clearRect(0, 0, width, height);
+
+        /* Soft daylight glow */
+
+        const sunlight = ctx.createRadialGradient(
+            width * 0.82,
+            height * 0.08,
+            0,
+            width * 0.82,
+            height * 0.08,
+            Math.max(width, height) * 0.75
+        );
+
+        sunlight.addColorStop(
+            0,
+            "rgba(255, 195, 85, 0.22)"
+        );
+
+        sunlight.addColorStop(
+            0.45,
+            "rgba(255, 220, 145, 0.09)"
+        );
+
+        sunlight.addColorStop(
+            1,
+            "rgba(255, 255, 255, 0)"
+        );
+
+        ctx.fillStyle = sunlight;
+
+        ctx.fillRect(0, 0, width, height);
+
+
+        /* Floating golden dust */
+
+        for (const particle of dustParticles) {
+
+            particle.y -= particle.speed;
+            particle.x += particle.drift;
+
+            if (particle.y < -10) {
+                particle.y = height + 10;
+                particle.x = Math.random() * width;
+            }
+
+            if (
+                particle.x < -10 ||
+                particle.x > width + 10
+            ) {
+                particle.x = Math.random() * width;
+            }
+
+            const twinkle =
+                0.65 +
+                Math.sin(
+                    now * 0.001 +
+                    particle.phase
+                ) * 0.35;
+
+            ctx.beginPath();
+
+            ctx.arc(
+                particle.x,
+                particle.y,
+                particle.radius,
+                0,
+                Math.PI * 2
+            );
+
+            ctx.globalAlpha =
+                particle.opacity * twinkle;
+
+            ctx.fillStyle = "#D9A441";
+
+            ctx.fill();
+
+        }
+
+        ctx.globalAlpha = 1;
+    }
     function drawStar(
     star,
     delta,
@@ -29970,7 +30091,23 @@ speed:
             width,
             height
         );
+        /* Use daylight particles in light mode */
 
+        if (
+            document.documentElement.dataset.theme === "light"
+        ) {
+
+            drawLightDust(now);
+
+            ctx.globalAlpha = 1;
+
+            ctx.globalCompositeOperation = "source-over";
+
+            animationFrame =
+                requestAnimationFrame(render);
+
+            return;
+        }
 
         /*
          * Very subtle space haze.
