@@ -630,3 +630,73 @@ html body .srkr-feature-launcher-button{border-radius:14px;font-weight:700}
   border:1px solid var(--edge);
   -webkit-backdrop-filter:var(--blur)!important;backdrop-filter:var(--blur)!important}
   
+/* =========================================================
+   SRKR GO — PREVENT BACKGROUND SCROLLING
+   Welcome | Quick Facilities | Destination Search
+========================================================= */
+
+/* 1. Lock the page behind active overlays */
+
+html:has(#srkrWelcome:not(.is-closing)),
+html:has(body.quick-facilities-open),
+html:has(#searchSuggestions[style*="display: block"]) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+body:has(#srkrWelcome:not(.is-closing)),
+body.quick-facilities-open,
+body:has(#searchSuggestions[style*="display: block"]) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+/* 2. Allow the welcome card to scroll internally */
+
+.srkr-welcome-card {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 3. Allow Quick Facilities to scroll internally */
+
+.quick-facilities-overlay {
+    overscroll-behavior: none;
+}
+
+.quick-facilities-panel {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 4. Keep destination suggestions inside their own scroll area */
+
+.search-suggestions {
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
+/* 5. Keep destination controls from propagating scroll */
+
+.search-area {
+    overscroll-behavior: contain;
+}
+/* Lock the background while destination suggestions are open */
+html:has(#searchSuggestions[style*="display: block"]),
+body:has(#searchSuggestions[style*="display: block"]) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+/* Only the destination list should scroll */
+#searchSuggestions {
+    max-height: min(260px, calc(100dvh - 180px));
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
