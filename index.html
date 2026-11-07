@@ -34,6 +34,133 @@
     >
 <link rel="stylesheet" href="user-manual.css">
 
+<style>
+/* =====================================================
+   SRKR GO — LIGHT GLASS THEME
+   Activated by the hanging lamp
+===================================================== */
+
+html[data-theme="light"] body {
+    background:
+        radial-gradient(circle at 15% 10%, rgba(96,165,250,.12), transparent 30%),
+        radial-gradient(circle at 85% 25%, rgba(14,165,233,.09), transparent 28%),
+        #f3f6fb !important;
+    color: #172033 !important;
+}
+
+/* Header */
+html[data-theme="light"] .college-header {
+    background: rgba(255,255,255,.78) !important;
+    border: 1px solid rgba(15,23,42,.09) !important;
+    box-shadow: 0 12px 35px rgba(15,23,42,.09) !important;
+}
+
+/* Main navigation card */
+html[data-theme="light"] .navigator-card {
+    background: rgba(255,255,255,.82) !important;
+    border: 1px solid rgba(15,23,42,.09) !important;
+    box-shadow: 0 18px 45px rgba(15,23,42,.09) !important;
+    color: #172033 !important;
+}
+
+/* Search */
+html[data-theme="light"] .search-box {
+    background: rgba(255,255,255,.92) !important;
+    border: 1px solid rgba(15,23,42,.13) !important;
+    box-shadow: 0 5px 18px rgba(15,23,42,.045) !important;
+}
+
+html[data-theme="light"] .search-box input,
+html[data-theme="light"] #destinationSearch {
+    color: #172033 !important;
+}
+
+html[data-theme="light"] .search-box input::placeholder,
+html[data-theme="light"] #destinationSearch::placeholder {
+    color: #8792a5 !important;
+}
+
+/* Main headings and labels */
+html[data-theme="light"] .navigator-card h2,
+html[data-theme="light"] .section-label,
+html[data-theme="light"] .header-tagline {
+    color: #25334a !important;
+}
+
+/* Common glass surfaces */
+html[data-theme="light"] .quick-facilities-panel,
+html[data-theme="light"] .quick-safety-panel,
+html[data-theme="light"] .srkr-feedback-panel,
+html[data-theme="light"] .srkr-navigation-panel,
+html[data-theme="light"] .developer-social-card {
+    background: rgba(255,255,255,.96) !important;
+    border: 1px solid rgba(15,23,42,.12) !important;
+    color: #172033 !important;
+    box-shadow: 0 20px 60px rgba(15,23,42,.14) !important;
+}
+
+/* Text inside common panels */
+html[data-theme="light"] .quick-facility-content strong,
+html[data-theme="light"] .quick-safety-panel h2,
+html[data-theme="light"] .srkr-feedback-title,
+html[data-theme="light"] .developer-social-card h2 {
+    color: #172033 !important;
+}
+
+html[data-theme="light"] .quick-facility-content small,
+html[data-theme="light"] .quick-safety-panel p,
+html[data-theme="light"] .srkr-feedback-subtitle,
+html[data-theme="light"] .developer-social-card > p {
+    color: #64748b !important;
+}
+
+/* Map stays clear and unaffected by glass effects */
+html[data-theme="light"] .map-container {
+    background: #e8edf4 !important;
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+/* Footer */
+html[data-theme="light"] .footer-connect {
+    border-color: rgba(15,23,42,.12) !important;
+}
+
+html[data-theme="light"] .footer-connect-label,
+html[data-theme="light"] .footer-social-link {
+    color: #64748b !important;
+}
+
+html[data-theme="light"] .footer-social-link {
+    background: rgba(255,255,255,.65) !important;
+    border-color: rgba(15,23,42,.12) !important;
+}
+
+/* Smooth theme transition */
+html[data-theme="light"] body,
+html[data-theme="light"] .college-header,
+html[data-theme="light"] .navigator-card,
+html[data-theme="light"] .search-box {
+    transition:
+        background 350ms ease,
+        color 350ms ease,
+        border-color 350ms ease,
+        box-shadow 350ms ease;
+}
+
+</style>
+<script>
+(function () {
+    try {
+        const savedTheme = localStorage.getItem("srkrGoTheme");
+        document.documentElement.dataset.theme =
+            savedTheme === "light" ? "light" : "dark";
+    } catch (error) {
+        document.documentElement.dataset.theme = "dark";
+    }
+})();
+</script>
+
 </head>
 
 
@@ -672,11 +799,7 @@
 ></canvas>
 
 
-    <!-- BACKGROUND -->
-
-    <div class="background-glow glow-one"></div>
-
-    <div class="background-glow glow-two"></div>
+    
 
 
     <!-- HEADER -->
@@ -767,6 +890,29 @@
 
         </div>
 
+
+<!-- INTERACTIVE LAMP THEME SWITCH -->
+
+<div class="theme-lamp">
+
+    <div class="lamp-shade">
+        <span class="lamp-light"></span>
+    </div>
+
+    <div class="lamp-neck"></div>
+
+    <button
+        type="button"
+        id="srkrThemeToggle"
+        class="lamp-pull-string"
+        aria-label="Pull lamp string to switch theme"
+        aria-pressed="false"
+    >
+        <span class="lamp-cord"></span>
+        <span class="lamp-pull-handle"></span>
+    </button>
+
+</div>
 
         <!-- DECORATIVE NAVIGATION SHAPES -->
         <div
@@ -1186,23 +1332,63 @@
             </p>
 
 
-            <p class="student-info">
+            
+<p class="student-info">
 
-                1st Year B.Tech
+    1st Year B.Tech
 
-                <span>
-                    •
-                </span>
+    <span>
+        •
+    </span>
 
-                Computer Science and
-                Information Technology(CSIT)
+    Computer Science and
+    Information Technology(CSIT)
 
-            </p>
+</p>
 
 
-            <p class="copyright">
-                © 2026 SRKR Go
-            </p>
+<!-- DEVELOPER SOCIAL LINKS -->
+
+<div class="footer-connect">
+
+    <p class="footer-connect-label">
+        CONNECT WITH THE DEVELOPER
+    </p>
+
+    <div class="footer-social-links">
+
+        <a
+            class="footer-social-link footer-instagram"
+            href="https://www.instagram.com/_orewa_light_167/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Connect with the developer on Instagram"
+        >
+            <span class="footer-social-icon" aria-hidden="true">◎</span>
+            <span>Instagram</span>
+            <span class="footer-social-arrow" aria-hidden="true">↗</span>
+        </a>
+
+        <a
+            class="footer-social-link footer-linkedin"
+            href="https://www.linkedin.com/in/kothapalli-navadeep-kumar-99988342b/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Connect with the developer on LinkedIn"
+        >
+            <span class="footer-social-icon" aria-hidden="true">in</span>
+            <span>LinkedIn</span>
+            <span class="footer-social-arrow" aria-hidden="true">↗</span>
+        </a>
+
+    </div>
+
+</div>
+
+
+<p class="copyright">
+    © 2026 SRKR Go
+</p>
 
         </div>
 
@@ -1457,7 +1643,72 @@ window.SRKRDeveloperModal = {
     });
 
 })();
-</script>
-</body>
 
+</script>
+
+<script>
+/* =========================================================
+   SRKR GO — INTERACTIVE PULL STRING LAMP
+========================================================= */
+
+(function () {
+    "use strict";
+
+    const lamp = document.querySelector(".theme-lamp");
+    const pullString = document.getElementById("srkrThemeToggle");
+
+    if (!lamp || !pullString) return;
+
+    function applyTheme(theme) {
+        const isLight = theme === "light";
+
+        document.documentElement.dataset.theme =
+            isLight ? "light" : "dark";
+
+        pullString.setAttribute("aria-pressed", String(isLight));
+
+        pullString.setAttribute(
+            "aria-label",
+            isLight
+                ? "Pull string to turn the lamp off and activate dark mode"
+                : "Pull string to turn the lamp on and activate light mode"
+        );
+
+        try {
+            localStorage.setItem("srkrGoTheme", theme);
+        } catch (error) {
+            // Theme remains functional for this session.
+        }
+    }
+
+    const savedTheme =
+        document.documentElement.dataset.theme === "light"
+            ? "light"
+            : "dark";
+
+    applyTheme(savedTheme);
+
+    pullString.addEventListener("click", function () {
+        if (lamp.classList.contains("pulling")) return;
+
+        lamp.classList.remove("pulling");
+        void lamp.offsetWidth;
+        lamp.classList.add("pulling");
+
+        const currentTheme =
+            document.documentElement.dataset.theme;
+
+        applyTheme(
+            currentTheme === "dark" ? "light" : "dark"
+        );
+
+        window.setTimeout(function () {
+            lamp.classList.remove("pulling");
+        }, 450);
+    });
+
+})();
+</script>
+
+</body>
 </html>
