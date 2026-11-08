@@ -26646,47 +26646,27 @@ facultyFinderStyle.textContent = `
 }
     .faculty-finder-button {
     width: fit-content;
-    max-width: max-content;
+    max-width: 100%;
+    min-width: 0;
     margin-top: 0;
-    flex-shrink: 0;
+    flex-shrink: 1;
     box-sizing: border-box;
     padding: 9px 13px;
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    background: var(--solid-2);
+    color: var(--text);
     font-size: 13px;
-    font-weight: 800;
-    white-space: nowrap;
-        border: 1px solid rgba(124, 131, 255, 0.22);
-        border-radius: 14px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(79, 70, 229, 0.88),
-                rgba(99, 102, 241, 0.82)
-            );
-
-        color: #ffffff;
-        font-size: 15px;
-        font-weight: 700;
-        cursor: pointer;
-
-        box-shadow:
-            0 8px 25px rgba(79, 70, 229, 0.18);
-
-        transition:
-            transform 0.2s ease,
-            box-shadow 0.2s ease,
-            border-color 0.2s ease;
-    }
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--hl);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
     .faculty-finder-button:hover {
-        transform: translateY(-1px);
-
-        box-shadow:
-            0 10px 28px rgba(79, 70, 229, 0.25);
-
-        border-color:
-            rgba(124, 131, 255, 0.40);
-    }
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
 
     .faculty-finder-button:active {
         transform: scale(0.98);
@@ -27424,6 +27404,26 @@ body.faculty-modal-open {
                 15px;
         }
     }
+        @media (max-width: 700px) {
+    .section-label-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    .section-label-row .faculty-finder-button,
+    .section-label-row .quick-facilities-button {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        margin: 0;
+        padding: 9px 5px;
+        font-size: 12px;
+        white-space: normal;
+        text-align: center;
+    }
+}
 `;
 document.head.appendChild(facultyFinderStyle);
 
@@ -27475,31 +27475,7 @@ if (sectionLabel && sectionLabel.parentElement) {
         quickFacilitiesButton
     );
 
-
-    /* =====================================================
-       QUICK FACILITIES HINT
-       ===================================================== */
-
-    const quickFacilitiesHint =
-        document.createElement("span");
-
-    quickFacilitiesHint.className =
-        "quick-facilities-hint";
-
-    quickFacilitiesHint.innerHTML =
-        "← Click here";
-
-    quickFacilitiesHint.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-    sectionLabelRow.appendChild(
-        quickFacilitiesHint
-    );
-
-
-    /* =====================================================
+     /* =====================================================
        FACULTY FINDER
        ===================================================== */
 
