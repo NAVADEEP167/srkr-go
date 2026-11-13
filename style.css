@@ -1718,3 +1718,58 @@ html body .srkr-smart-recommendation {
     font-size: 12px;
     text-align: right;
 }
+/* =========================================================
+   ACHIEVEMENT TRIP STATS — follows light/dark theme
+========================================================= */
+
+.srkr-trip-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.srkr-trip-stat {
+    padding: 9px 6px;
+    border-radius: 12px;
+    background: var(--glass-card);
+    border: 1px solid var(--edge);
+    box-shadow: var(--hl);
+    text-align: center;
+    transition: background .3s, border-color .3s;
+}
+
+.srkr-trip-stat-icon {
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.srkr-trip-stat-value {
+    margin-top: 2px;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+    transition: color .3s;
+}
+
+.srkr-trip-stat-label {
+    margin-top: 1px;
+    font-size: 10px;
+    color: var(--muted);
+    transition: color .3s;
+}
+
+.srkr-trip-note {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--muted);
+}
+
+/* Light mode: slightly more solid cards so they stay readable */
+html[data-theme="light"] .srkr-trip-stat {
+    background: rgba(255, 255, 255, .78);
+}
+
+html[data-theme="light"] .srkr-trip-stat-value {
+    color: var(--accent);
+}

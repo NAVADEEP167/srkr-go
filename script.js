@@ -4423,6 +4423,96 @@ let lastNavigationMapFollow = 0;
 let navigationCompleted = false;
 let navigationPending = false;
 /* =========================================================
+   SRKR GO — TRIP STATS (steps + pace for the achievement)
+========================================================= */
+
+const NAV_STEP_LENGTH_METERS = 0.75;
+const NAV_TRIP_MIN_STEP_METERS = 2;
+
+let navigationTripStartTime = null;
+let navigationTripDistance = 0;
+let navigationTripLastPosition = null;
+
+function startNavigationTrip() {
+    navigationTripStartTime = Date.now();
+    navigationTripDistance = 0;
+    navigationTripLastPosition = null;
+}
+
+function resetNavigationTrip() {
+    navigationTripStartTime = null;
+    navigationTripDistance = 0;
+    navigationTripLastPosition = null;
+}
+
+function trackNavigationTripPosition(position) {
+    if (
+        !navigationTripStartTime ||
+        !Array.isArray(position) ||
+        position.length < 2
+    ) {
+        return;
+    }
+
+    if (!navigationTripLastPosition) {
+        navigationTripLastPosition = [position[0], position[1]];
+        return;
+    }
+
+    const moved = distanceBetween(
+        navigationTripLastPosition,
+        position
+    );
+
+    // Ignore GPS jitter while standing still.
+    if (moved < NAV_TRIP_MIN_STEP_METERS) {
+        return;
+    }
+
+    navigationTripDistance += moved;
+    navigationTripLastPosition = [position[0], position[1]];
+}
+
+function getNavigationTripSummary() {
+    if (!navigationTripStartTime) {
+        return null;
+    }
+
+    const seconds = Math.max(
+        1,
+        Math.round((Date.now() - navigationTripStartTime) / 1000)
+    );
+
+    const distance = Math.round(navigationTripDistance);
+    const steps = Math.round(distance / NAV_STEP_LENGTH_METERS);
+
+    let paceText = "—";
+
+    if (distance >= 20) {
+        const secondsPerKm = seconds / (distance / 1000);
+        const paceMinutes = Math.floor(secondsPerKm / 60);
+        const paceSeconds = Math.round(secondsPerKm % 60);
+
+        paceText =
+            paceSeconds === 60
+                ? `${paceMinutes + 1}:00 /km`
+                : `${paceMinutes}:${String(paceSeconds).padStart(2, "0")} /km`;
+    }
+
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+
+    return {
+        distance,
+        steps,
+        paceText,
+        timeText:
+            minutes > 0
+                ? `${minutes} min ${remainder} s`
+                : `${remainder} s`
+    };
+}
+/* =========================================================
    TRUE LIVE ROUTING STATE
    ---------------------------------------------------------
    Keeps the route start synchronized with the user's
@@ -5474,23 +5564,17 @@ if (srkrNavigationTripETA) {
 
 }
 }
-
-
 function showNavigationArrived(
-    destinationName
+    destinationName,
+    tripSummary = null
 ) {
 
     if (!navigationPanel) return;
 
     showNavigationPanel();
 
-    navigationPanel.classList.remove(
-        "warning"
-    );
-
-    navigationPanel.classList.add(
-        "arrived"
-    );
+    navigationPanel.classList.remove("warning");
+    navigationPanel.classList.add("arrived");
 
     srkrNavigationDestination.textContent =
         destinationName;
@@ -5498,17 +5582,48 @@ function showNavigationArrived(
     srkrNavigationDistance.textContent =
         "ACHIEVEMENT UNLOCKED";
 
-    srkrNavigationStatus.innerHTML =
-        "🏆 <strong>Destination Reached!</strong><br>" +
-        "<span>Lift your head up — you have arrived!</span>";
+        const statBox = function (icon, value, label) {
+        return `
+            <div class="srkr-trip-stat">
+                <div class="srkr-trip-stat-icon">${icon}</div>
+                <div class="srkr-trip-stat-value">${value}</div>
+                <div class="srkr-trip-stat-label">${label}</div>
+            </div>
+        `;
+    };
+
+    let statsHTML = "";
+
+    if (tripSummary) {
+        statsHTML = `
+            <div class="srkr-trip-stats">
+                ${statBox("👣", tripSummary.steps.toLocaleString(), "steps")}
+                ${statBox("⚡", tripSummary.paceText, "avg pace")}
+                ${statBox("📏", tripSummary.distance + " m", "walked")}
+                ${statBox("⏱️", tripSummary.timeText, "time")}
+            </div>
+            <div class="srkr-trip-note">
+                Steps are estimated from distance walked.
+            </div>
+        `;
+    }
+
+    srkrNavigationStatus.innerHTML = `
+        <div style="flex:1;min-width:0">
+            🏆 <strong>Destination Reached!</strong><br>
+            <span>Lift your head up — you have arrived!</span>
+            ${statsHTML}
+        </div>
+    `;
 
     srkrNavigationIcon.textContent =
         "🏆";
-if (srkrNavigationInstruction) {
 
-    srkrNavigationInstruction.style.display =
-        "none";
-}
+    if (srkrNavigationInstruction) {
+        srkrNavigationInstruction.style.display =
+            "none";
+    }
+
     srkrNavigationStop.textContent =
         "✓ DONE";
 
@@ -5517,8 +5632,6 @@ if (srkrNavigationInstruction) {
         "Finish navigation"
     );
 }
-
-
 srkrNavigationStop.addEventListener(
     "click",
     function () {
@@ -17688,7 +17801,7 @@ const remainingPath = [
 }
 
 function completeNavigation() {
-
+const tripSummary = getNavigationTripSummary();
 clearDestinationConfirmationCountdown();
 
     /*
@@ -17755,8 +17868,9 @@ clearDestinationConfirmationCountdown();
         statusMessage.innerHTML =
             `🏁 <strong>You have arrived at ${location.name}</strong>`;
 
-        showNavigationArrived(
-            location.name
+                showNavigationArrived(
+            location.name,
+            tripSummary
         );
 
     } else {
@@ -17764,10 +17878,12 @@ clearDestinationConfirmationCountdown();
         statusMessage.textContent =
             "🏁 You have arrived.";
 
-        showNavigationArrived(
-            "Destination"
+                showNavigationArrived(
+            "Destination",
+            tripSummary
         );
     }
+    resetNavigationTrip();
 }
 function clearDestinationConfirmationCountdown() {
 
@@ -19088,7 +19204,9 @@ if (
     navigationCompleted =
         false;
 
-
+    if (!isLiveReroute) {
+        startNavigationTrip();
+    }
     /* =====================================================
        DRAW ONLY THE ROAD ROUTE
     ===================================================== */
@@ -20498,6 +20616,9 @@ smoothNavigationMapBearing(
 
 currentUserPosition =
     rawPosition;
+    if (navigationActive) {
+    trackNavigationTripPosition(rawPosition);
+}
  if (
     !wasGeofenceConfirmed &&
     navigationGeofenceConfirmed === true &&
@@ -27512,10 +27633,6 @@ if (!facultyButtonInserted) {
    Water Refill + Washrooms
    Uses the existing live navigation system.
    ========================================================= */
-
-
-
-
 /* =========================================================
    QUICK FACILITIES OVERLAY
    ========================================================= */
