@@ -158,6 +158,137 @@ window.SRKRManual = {
     close: closeManual
 };
         /* =====================================================
+           PARALLAX BACKGROUND
+           Decorative only. Sits behind the manual content.
+        ===================================================== */
+
+        (function setupManualParallax() {
+
+            const dialog =
+                panel.querySelector(".srkr-manual-panel");
+
+            if (
+                !dialog ||
+                dialog.querySelector(".srkr-manual-parallax")
+            ) {
+                return;
+            }
+
+            const layer = document.createElement("div");
+
+            layer.className = "srkr-manual-parallax";
+            layer.setAttribute("aria-hidden", "true");
+
+            layer.innerHTML =
+                '<div class="mp-grid"></div>' +
+                '<span class="mp-orb mp-orb-a"></span>' +
+                '<span class="mp-orb mp-orb-b"></span>' +
+                '<span class="mp-ring"></span>' +
+                '<span class="mp-pin mp-pin-a">📍</span>' +
+                '<span class="mp-pin mp-pin-b">🧭</span>' +
+                '<span class="mp-pin mp-pin-c">🏫</span>' +
+                '<span class="mp-pin mp-pin-d">📍</span>';
+
+            dialog.insertBefore(layer, dialog.firstChild);
+
+            /* Respect reduced motion: keep the static decoration only. */
+            if (
+                window.matchMedia(
+                    "(prefers-reduced-motion: reduce)"
+                ).matches
+            ) {
+                return;
+            }
+
+            const target = { x: 0, y: 0, p: 0 };
+            const now = { x: 0, y: 0, p: 0 };
+
+            let frame = null;
+
+            function tick() {
+
+                frame = null;
+
+                now.x += (target.x - now.x) * 0.12;
+                now.y += (target.y - now.y) * 0.12;
+                now.p += (target.p - now.p) * 0.12;
+
+                layer.style.setProperty("--mx", now.x.toFixed(3));
+                layer.style.setProperty("--my", now.y.toFixed(3));
+                layer.style.setProperty("--sp", now.p.toFixed(3));
+
+                const settled =
+                    Math.abs(target.x - now.x) < 0.002 &&
+                    Math.abs(target.y - now.y) < 0.002 &&
+                    Math.abs(target.p - now.p) < 0.002;
+
+                if (!settled) {
+                    frame = requestAnimationFrame(tick);
+                }
+            }
+
+            function request() {
+                if (frame === null) {
+                    frame = requestAnimationFrame(tick);
+                }
+            }
+
+            /* Scroll parallax: progress through the manual (0 → 1). */
+            function readScroll() {
+
+                const max =
+                    content.scrollHeight - content.clientHeight;
+
+                target.p =
+                    max > 0
+                        ? Math.min(
+                            1,
+                            Math.max(0, content.scrollTop / max)
+                        )
+                        : 0;
+
+                request();
+            }
+
+            content.addEventListener(
+                "scroll",
+                readScroll,
+                { passive: true }
+            );
+
+            /* Pointer parallax: mouse / pen only (not touch). */
+            dialog.addEventListener(
+                "pointermove",
+                function (event) {
+
+                    if (event.pointerType === "touch") {
+                        return;
+                    }
+
+                    const rect = dialog.getBoundingClientRect();
+
+                    target.x =
+                        ((event.clientX - rect.left) / rect.width - 0.5) * 2;
+
+                    target.y =
+                        ((event.clientY - rect.top) / rect.height - 0.5) * 2;
+
+                    request();
+                },
+                { passive: true }
+            );
+
+            dialog.addEventListener(
+                "pointerleave",
+                function () {
+                    target.x = 0;
+                    target.y = 0;
+                    request();
+                }
+            );
+
+        })();
+        /* =====================================================
            BUTTON EVENTS
         ===================================================== */
 
