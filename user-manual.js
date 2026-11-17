@@ -155,6 +155,8 @@ window.SRKRManual = {
         return !panel.hidden;
     },
 
+    open: openManual,
+
     close: closeManual
 };
         /* =====================================================
