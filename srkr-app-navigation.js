@@ -351,7 +351,15 @@ for (let i = popupStack.length - 1; i >= 0; i--) {
                 featureHistoryToken = null;
                 return;
             }
-
+            // Priority 2.5: leave the Tools tab before anything else.
+            if (
+                window.SRKRTabs &&
+                window.SRKRTabs.current() !== "home"
+            ) {
+                window.SRKRTabs.show("home");
+                pushRootState();
+                return;
+            }
             // Priority 3: Protect live navigation.
             if (
                 window.SRKRNavigation &&
