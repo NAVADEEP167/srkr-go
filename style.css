@@ -47,7 +47,9 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .35);
   --hl: inset 0 1px 0 rgba(255, 255, 255, .07);
   --blur: blur(28px) saturate(180%);
-  --font: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font: "DM Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 html[data-theme="light"] {
@@ -2206,3 +2208,135 @@ body.srkr-is-offline .srkr-toast { top: calc(env(safe-area-inset-top, 0px) + 56p
   font-size: 12px;
   font-weight: 700;
 }
+/* =========================================================
+   19. TYPOGRAPHY
+   Display / body / mono system, tuned for dark + light.
+   `html body :is(...)` beats the styles injected by other files.
+========================================================= */
+:root { --w-body: 400; }
+html[data-theme="light"] { --w-body: 450; }
+
+html body {
+  font-family: var(--font);
+  font-weight: var(--w-body);
+  font-size: 15px;
+  line-height: 1.5;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Everything inherits the body font, including the map */
+html body :is(
+  button, input, select, textarea,
+  .leaflet-container, .leaflet-popup-content-wrapper, .leaflet-tooltip
+) { font-family: var(--font); }
+
+html body button { font-weight: 600; }
+
+#srkrDestinationConfirmationCountdown { font-family: var(--font) !important; }
+
+/* ---------- DISPLAY: titles ---------- */
+html body :is(
+  .navigator-card h2, .srkr-tools-card h2, .college-name h1,
+  .location-title, .quick-facilities-title, .developer-social-card h2,
+  .srkr-feedback-title, .srkr-feature-panel-title, .faculty-panel-title,
+  .srkr-manual-heading-wrap h2, .srkr-checkpoint-card h2, .srkr-alerts-heading,
+  .srkr-fan-popup-header h2, .footer-title, .quick-safety-panel h2,
+  .srkr-navigation-destination, .srkr-floor-detail-title,
+  .srkr-feature-card-title, .srkr-alert-title, .faculty-card-name,
+  .srkr-feature-section-title, .srkr-manual-section-title h3
+) {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -.015em;
+}
+
+html body .brand-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+html body :is(.intro-main-title, .intro-scene-title) {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1.02;
+}
+
+html body .college-name h1 { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+html body .college-name h1 span { font-weight: 500; }
+
+/* ---------- MONO: labels, eyebrows ---------- */
+html body :is(
+  .section-label, .srkr-tools-eyebrow, .srkr-tools-heading,
+  .srkr-feedback-eyebrow, .quick-facilities-eyebrow, .developer-social-eyebrow,
+  .intro-eyebrow, .srkr-manual-eyebrow, .srkr-alerts-eyebrow,
+  .srkr-checkpoint-eyebrow, .srkr-fan-popup-eyebrow,
+  .srkr-navigation-label, .srkr-navigation-distance-label,
+  .footer-connect-label, .srkr-welcome-footer, .intro-scene-number,
+  .srkr-cafe-section-label, .srkr-cafe-timing-label
+) {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+/* ---------- MONO: badges, codes, prices ---------- */
+html body :is(
+  .info-badge, .srkr-room-number, .srkr-cafe-price, .srkr-cafe-category-count,
+  .srkr-alert-category, .srkr-feature-badge, .srkr-floor-selector-arrow,
+  .srkr-feature-list-meta
+) {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+html body .srkr-feature-list-meta { font-size: 11px; }
+
+/* ---------- NUMBERS ---------- */
+html body :is(
+  .srkr-navigation-distance, .srkr-navigation-instruction-distance,
+  .srkr-navigation-trip-eta, .srkr-trip-stat-value,
+  .user-stat-content strong, .srkr-feedback-vote span
+) { font-variant-numeric: tabular-nums; }
+
+html body .srkr-navigation-distance {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -.03em;
+}
+html body :is(.user-stat-content strong, .srkr-trip-stat-value, .srkr-navigation-trip-eta) {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+
+/* ---------- Calmer weights (800 looks shouty) ---------- */
+html body :is(
+  .smart-campus-pill, .srkr-visit-label, .srkr-tab, .suggestion-name,
+  .srkr-navigation-instruction-text, .srkr-cafe-menu-card-title,
+  .srkr-floor-selector-title, .quick-facility-content strong,
+  .srkr-feature-list-name, .srkr-feature-list-title, .srkr-feature-launcher-button
+) { font-weight: 600; }
+
+html body :is(.header-tagline, .suggestion-subtitle, .srkr-feature-card-text) {
+  letter-spacing: .005em;
+}
+
+/* ---------- Theme tuning ---------- */
+/* Light text on dark glows slightly, so keep it a touch lighter */
+html[data-theme="dark"] body :is(
+  .srkr-feature-card-text, .srkr-alert-message, .srkr-feedback-message,
+  .srkr-manual-steps, .srkr-manual-tips, .location-info
+) { font-weight: 400; letter-spacing: .006em; }
+
+/* Dark text on light glass reads thin, so add a little weight */
+html[data-theme="light"] body :is(
+  .srkr-feature-card-text, .srkr-alert-message, .srkr-feedback-message,
+  .srkr-manual-steps, .srkr-manual-tips, .location-info,
+  .status-message, .header-tagline
+) { font-weight: 480; }
