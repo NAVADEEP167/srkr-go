@@ -2340,3 +2340,59 @@ html[data-theme="light"] body :is(
   .srkr-manual-steps, .srkr-manual-tips, .location-info,
   .status-message, .header-tagline
 ) { font-weight: 480; }
+/* =========================================================
+   QUICK FACILITY — DESTINATION INFORMATION
+   Uses existing theme tokens. No palette changes.
+========================================================= */
+
+.quick-facility-route-card {
+    display: grid;
+    gap: 9px;
+    margin: 9px 0 5px;
+    padding: 14px;
+    text-align: left;
+    background: var(--glass-panel);
+    color: var(--text);
+    border: 1px solid var(--edge);
+    border-radius: 13px;
+}
+
+.quick-facility-route-eyebrow {
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.1px;
+}
+
+.quick-facility-route-name {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.quick-facility-route-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.quick-facility-route-row span {
+    color: var(--muted);
+    flex: 0 0 auto;
+}
+
+.quick-facility-route-row strong {
+    color: var(--text);
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.quick-facility-route-note {
+    margin: 8px 0 2px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}

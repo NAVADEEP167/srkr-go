@@ -28400,67 +28400,96 @@ if (
                     ? data.floors
                     : {};
 
-            Object.entries(floors).forEach(
-                function ([floorName, entries]) {
-                    if (!Array.isArray(entries)) return;
+            const floorMatches = [];
 
-                    const matchingEntries = entries.filter(
-                        function (entry) {
-                            if (!entry) return false;
+Object.entries(floors).forEach(
+    function ([floorName, entries]) {
 
-                            const recordText =
-                                typeof entry === "string"
-                                    ? entry
-                                    : [
-                                        entry.room || "",
-                                        entry.detail || ""
-                                    ].join(" ");
+        if (!Array.isArray(entries)) return;
 
-                            return quickFacilityMatchesText(
-                                kind,
-                                recordText
-                            );
-                        }
-                    );
+        const matchingEntries = entries.filter(
+            function (entry) {
+                if (!entry) return false;
 
-                    if (!matchingEntries.length) return;
+                const recordText =
+                    typeof entry === "string"
+                        ? entry
+                        : [
+                            entry.room || "",
+                            entry.detail || ""
+                        ].join(" ");
 
-                    const matchedText =
-                        matchingEntries.map(function (entry) {
-                            return typeof entry === "string"
-                                ? entry
-                                : [
-                                    entry.room || "",
-                                    entry.detail || ""
-                                ].join(" ");
-                        }).join(" ");
+                return quickFacilityMatchesText(
+                    kind,
+                    recordText
+                );
+            }
+        );
 
-                    const refillSpecific =
-                        kind === "water" &&
-                        refillPattern.test(matchedText);
+        if (!matchingEntries.length) return;
 
-                    addQuickFacilityCandidate(
-                        candidates,
-                        kind,
-                        position,
-                        {
-                            destinationId: blockId,
-                            facilityName:
-                                quickFacilityLabelFromText(
-                                    kind,
-                                    matchedText
-                                ),
-                            blockName: data.title || location.name,
-                            floorLabel: floorName,
-                            exactPoint: false,
-                            qualityRank: refillSpecific ? 1 : 2,
-                            refillSpecific,
-                            matchedText
-                        },
-                        destinationPositionCache
-                    );
-                }
-            );
+        const matchedText =
+            matchingEntries.map(function (entry) {
+                return typeof entry === "string"
+                    ? entry
+                    : [
+                        entry.room || "",
+                        entry.detail || ""
+                    ].join(" ");
+            }).join(" ");
+
+        floorMatches.push({
+            floorName,
+            matchedText
+        });
+    }
+);
+
+
+/* One block candidate, with all verified matching floors. */
+if (floorMatches.length) {
+
+    const floorNames = [
+        ...new Set(
+            floorMatches.map(item => item.floorName)
+        )
+    ];
+
+    const matchedText =
+        floorMatches.map(item => item.matchedText).join(" ");
+
+    const refillSpecific =
+        kind === "water" &&
+        refillPattern.test(matchedText);
+
+    addQuickFacilityCandidate(
+        candidates,
+        kind,
+        position,
+        {
+            destinationId: blockId,
+
+            facilityName:
+                quickFacilityLabelFromText(
+                    kind,
+                    matchedText
+                ),
+
+            blockName: data.title || location.name,
+
+            floorLabel: floorNames.join(" / "),
+
+            exactPoint: false,
+
+            qualityRank: refillSpecific ? 1 : 2,
+
+            refillSpecific,
+
+            matchedText
+        },
+        destinationPositionCache
+    );
+}
         }
     );
 
@@ -28491,25 +28520,14 @@ if (
         return null;
     }
 
-    const closestDistance = Math.min(
-        ...rankedCandidates.map(
-            candidate => candidate.distance
-        )
-    );
+    /* Always prioritize the shortest calculated distance. */
+rankedCandidates.sort(
+    (a, b) =>
+        a.distance - b.distance ||
+        a.qualityRank - b.qualityRank
+);
 
-    const nearCandidates =
-        rankedCandidates.filter(
-            candidate =>
-                candidate.distance <= closestDistance + 1
-        );
-
-    nearCandidates.sort(
-        (a, b) =>
-            a.qualityRank - b.qualityRank ||
-            a.distance - b.distance
-    );
-
-    return nearCandidates[0] || null;
+return rankedCandidates[0] || null;
 }
 /* ---------------------------------------------------------
    8. FORMAT THE DISTANCE
@@ -28531,11 +28549,164 @@ function formatQuickFacilityDistance(distance) {
 /* ---------------------------------------------------------
    9. START NAVIGATION USING THE EXISTING ROUTER
    --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   WASHROOM FLOORS PER BLOCK (boys / girls separately)
+   Uses ONLY the existing block-floor data.
+   Returns null when the block has no floor data,
+   otherwise an array of floor names (can be empty).
+--------------------------------------------------------- */
+function getQuickWashroomFloorsForBlock(blockId, kind) {
+    if (
+        (kind !== "boys" && kind !== "girls") ||
+        typeof getBlockFloorData !== "function"
+    ) {
+        return null;
+    }
 
+    const data = getBlockFloorData(blockId);
+
+    if (!data || !data.floors) {
+        return null;
+    }
+
+    const floorNames = Object.keys(data.floors);
+
+    const common = Array.isArray(data.commonFacilities)
+        ? data.commonFacilities
+        : [];
+
+    // Example: Civil Block → "Boys Washroom on every floor"
+    const onEveryFloor = common.some(function (facility) {
+        return (
+            quickFacilityMatchesText(kind, facility) &&
+            /\bevery floor\b/i.test(facility)
+        );
+    });
+
+    if (onEveryFloor) {
+        return floorNames.slice();
+    }
+
+    return floorNames.filter(function (floorName) {
+        const entries = data.floors[floorName];
+
+        return Array.isArray(entries) && entries.some(function (entry) {
+            if (!entry) return false;
+
+            const text = typeof entry === "string"
+                ? entry
+                : [entry.room || "", entry.detail || ""].join(" ");
+
+            return quickFacilityMatchesText(kind, text);
+        });
+    });
+}
+
+function buildQuickFacilityRouteCard(
+    facilityName,
+    details = {}
+) {
+    const blockName = escapeHTML(
+        details.blockName || "Block details not listed"
+    );
+
+    const distanceText = escapeHTML(
+        details.distanceText || "Distance unavailable"
+    );
+
+    const routeStatus = details.routeReachable
+        ? "Road-network route available"
+        : "Route not confirmed by road network";
+
+    const distanceLabel = details.routeReachable
+        ? "Walking distance"
+        : "Approximate map distance";
+
+    const row = function (label, value) {
+        return `
+            <div class="quick-facility-route-row">
+                <span>${label}</span>
+                <strong>${value}</strong>
+            </div>
+        `;
+    };
+
+    const floorList = function (floors) {
+        return floors.map(escapeHTML).join(", ");
+    };
+
+    const kind = details.kind;
+    const isWashroom = kind === "boys" || kind === "girls";
+
+    const boysFloors = isWashroom
+        ? getQuickWashroomFloorsForBlock(details.destinationId, "boys")
+        : null;
+
+    const girlsFloors = isWashroom
+        ? getQuickWashroomFloorsForBlock(details.destinationId, "girls")
+        : null;
+
+    let floorRowsHTML = "";
+
+    if (isWashroom && boysFloors !== null && girlsFloors !== null) {
+
+        const requiredFloors =
+            kind === "boys" ? boysFloors : girlsFloors;
+
+        floorRowsHTML +=
+            row(
+                kind === "boys"
+                    ? "🚹 Boys washroom floor"
+                    : "🚺 Girls washroom floor",
+                requiredFloors.length
+                    ? floorList(requiredFloors)
+                    : "Floor not listed"
+            ) +
+            row(
+                "🚹 Boys washrooms in this block",
+                boysFloors.length
+                    ? floorList(boysFloors)
+                    : "Not listed in campus data"
+            ) +
+            row(
+                "🚺 Girls washrooms in this block",
+                girlsFloors.length
+                    ? floorList(girlsFloors)
+                    : "Not listed in campus data"
+            );
+
+    } else {
+        floorRowsHTML = row(
+            "🏬 Floor / Area",
+            escapeHTML(
+                details.floorLabel || "Floor details not listed"
+            )
+        );
+    }
+
+    return `
+        <div class="quick-facility-route-card">
+
+            <span class="quick-facility-route-eyebrow">
+                NEAREST VERIFIED FACILITY
+            </span>
+
+            <strong class="quick-facility-route-name">
+                ${escapeHTML(facilityName)}
+            </strong>
+
+            ${row("🏢 Block", blockName)}
+            ${floorRowsHTML}
+            ${row("📍 " + distanceLabel, distanceText)}
+            ${row("Navigation", routeStatus)}
+
+        </div>
+    `;
+}
 function navigateToQuickFacility(
     destinationId,
     facilityName,
-    facilityDetails = ""
+    facilityDetails = {}
 ) {
     closeQuickFacilities();
 
@@ -28552,12 +28723,40 @@ function navigateToQuickFacility(
         return;
     }
 
-    const safeName =
-        escapeHTML(facilityName);
+    const detailsHTML =
+    buildQuickFacilityRouteCard(
+        facilityName,
+        facilityDetails
+    );
+    /* Show the facility card in the info panel (it is not overwritten by GPS updates). */
+    if (locationInfo) {
+        locationInfo.innerHTML = `
+            <div class="location-header">
+                <div>
+                    <div class="location-title">
+                        ${escapeHTML(facilityName)}
+                    </div>
+                    <div class="location-category">
+                        Quick Facilities
+                    </div>
+                </div>
 
-    const safeDetails =
-        escapeHTML(facilityDetails);
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="info-badge">SRKR Go</span>
+                    <button
+                        type="button"
+                        class="srkr-popup-close"
+                        onclick="closeLocationInfo()"
+                        aria-label="Close facility details"
+                    >×</button>
+                </div>
+            </div>
 
+            ${detailsHTML}
+        `;
+
+        locationInfo.classList.add("visible");
+    }
 
     /* Select the destination in the existing interface. */
 
@@ -28622,10 +28821,11 @@ notifySRKRDestinationChanged();
             hideNavigationRecenterControl();
 
             showQuickFacilityStatus(
-                `📍 <strong>Navigation to ${safeName}</strong><br>` +
-                `${safeDetails ? safeDetails + "<br>" : ""}` +
-                "Live navigation started from your location."
-            );
+    `${detailsHTML}
+    <p class="quick-facility-route-note">
+        Live navigation started from your location.
+    </p>`
+);
         } else {
             navigationActive = false;
             navigationPending = false;
@@ -28644,10 +28844,11 @@ notifySRKRDestinationChanged();
 
     navigationActive = false;
 
-    showQuickFacilityStatus(
-        `📍 <strong>Preparing navigation to ${safeName}</strong><br>` +
-        `${safeDetails ? safeDetails + "<br>" : ""}` +
-        "Navigation will start when GPS confirms you are inside SRKR."
+      showQuickFacilityStatus(
+        `${detailsHTML}
+        <p class="quick-facility-route-note">
+            Navigation will start when GPS confirms you are inside SRKR campus.
+        </p>`
     );
 
     if (typeof startLocationTracking === "function") {
@@ -28701,10 +28902,20 @@ function findAndNavigateQuickFacility(
             nearest.distance
         );
 
-    const facilityDetails =
-        nearest.exactPoint
-            ? `Exact mapped facility pin • ${distanceText}`
-            : `${nearest.blockName} • ${nearest.floorLabel} • ${distanceText}`;
+        const facilityDetails = {
+        kind,
+        destinationId: nearest.destinationId,
+
+        blockName:
+            nearest.blockName || "Block details not listed",
+
+        floorLabel:
+            nearest.floorLabel || "Floor details not recorded",
+
+        distanceText,
+
+        routeReachable: nearest.routeReachable
+    };
 
     navigateToQuickFacility(
         nearest.destinationId,
