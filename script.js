@@ -20051,19 +20051,11 @@ function getNavigationInstructionDistance(
         userProjection.distanceFromRouteStart
     );
 }
-if (
-    !document.getElementById(
-        "srkrF1MarkerStyles"
-    )
-) {
+if (!document.getElementById("srkrF1MarkerStyles")) {
 
-    const f1Style =
-        document.createElement(
-            "style"
-        );
+    const f1Style = document.createElement("style");
 
-    f1Style.id =
-        "srkrF1MarkerStyles";
+    f1Style.id = "srkrF1MarkerStyles";
 
     f1Style.textContent = `
 
@@ -20073,225 +20065,63 @@ if (
         }
 
         .srkr-f1-marker {
-    width: 34px;
-    height: 34px;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform-origin: center center;
-transition: none;
-filter:
-    drop-shadow(
-        0 2px 4px
-        rgba(0,0,0,.28)
-    );
-will-change: transform;
-        }
-
-        /* ---------------- F1 CAR BODY ---------------- */
-
-        .srkr-f1-car-body {
-            position: absolute;
-            width: 18px;
-            height: 43px;
-            border-radius: 7px 7px 4px 4px;
-            background:
-                linear-gradient(
-                    to bottom,
-                    #f5f5f5 0%,
-                    #d7d7d7 45%,
-                    #a7a7a7 100%
-                );
-            box-shadow:
-                inset 0 0 0 2px
-                rgba(255,255,255,.65),
-                0 2px 5px
-                rgba(0,0,0,.3);
-            z-index: 4;
-        }
-
-        /* ---------------- COCKPIT ---------------- */
-
-        .srkr-f1-cockpit {
-            position: absolute;
-            width: 12px;
-            height: 18px;
-            top: 11px;
-            border-radius: 7px 7px 3px 3px;
-            background:
-                linear-gradient(
-                    135deg,
-                    #111827,
-                    #475569
-                );
-            box-shadow:
-                inset 0 1px 2px
-                rgba(255,255,255,.35);
-            z-index: 6;
-        }
-
-        /* ---------------- FRONT NOSE ---------------- */
-
-        .srkr-f1-nose {
-            position: absolute;
-            width: 7px;
-            height: 13px;
-            top: -5px;
-            border-radius: 4px 4px 1px 1px;
-            background: #eeeeee;
-            z-index: 5;
-        }
-
-        /* ---------------- FRONT WING ---------------- */
-
-        .srkr-f1-front-wing {
-            position: absolute;
-            width: 31px;
-            height: 5px;
-            top: -3px;
-            border-radius: 3px;
-            background:
-                linear-gradient(
-                    to right,
-                    #111,
-                    #eeeeee,
-                    #111
-                );
-            z-index: 3;
-        }
-
-        /* ---------------- REAR WING ---------------- */
-
-        .srkr-f1-rear-wing {
-            position: absolute;
             width: 28px;
-            height: 5px;
-            bottom: 3px;
-            border-radius: 2px;
-            background:
-                linear-gradient(
-                    to right,
-                    #111,
-                    #d4d4d4,
-                    #111
-                );
-            z-index: 3;
+            height: 56px;
+            transform-origin: center center;
+            transition: none;
+            will-change: transform;
+            filter:
+                drop-shadow(0 3px 3px rgba(0, 0, 0, .45))
+                drop-shadow(0 0 1px rgba(0, 0, 0, .6));
         }
 
-        /* ---------------- WHEELS ---------------- */
-
-        .srkr-f1-wheel {
-            position: absolute;
-            width: 7px;
-            height: 13px;
-            border-radius: 3px;
-            background: #111;
+        .srkr-f1-svg {
+            position: relative;
             z-index: 2;
+            display: block;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
         }
 
-        .srkr-f1-wheel-left {
-            left: 7px;
-            top: 12px;
-        }
-
-        .srkr-f1-wheel-right {
-            right: 7px;
-            top: 12px;
-        }
-
-        .srkr-f1-wheel-left-rear {
-            left: 7px;
-            bottom: 8px;
-        }
-
-        .srkr-f1-wheel-right-rear {
-            right: 7px;
-            bottom: 8px;
-        }
-
-        /* ---------------- SMOKE ---------------- */
-
+        /* Exhaust haze behind the rear wing, only while moving */
         .srkr-f1-smoke {
             position: absolute;
             left: 50%;
-            bottom: -10px;
+            bottom: -9px;
+            z-index: 1;
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background:
-                rgba(210,210,210,.72);
-            transform:
-                translateX(-50%);
-            filter:
-                blur(1px);
-            z-index: 1;
-
-
-opacity: 0;
-animation: none;
-
+            background: rgba(200, 200, 200, .7);
+            transform: translateX(-50%);
+            filter: blur(1.5px);
+            opacity: 0;
         }
 
-.srkr-f1-marker.is-moving .srkr-f1-smoke {
-    opacity: .45;
-    animation: srkrF1Smoke 1400ms infinite ease-out;
-}
-
-        .srkr-f1-smoke::before,
-        .srkr-f1-smoke::after {
-            content: "";
-            position: absolute;
-            border-radius: 50%;
-            background:
-                rgba(190,190,190,.52);
-            filter:
-                blur(1px);
+        .srkr-f1-marker.is-moving .srkr-f1-smoke {
+            opacity: .5;
+            animation: srkrF1Smoke 1200ms infinite ease-out;
         }
 
-        .srkr-f1-smoke::before {
-            width: 9px;
-            height: 9px;
-            left: -7px;
-            top: 5px;
-        }
-
-        .srkr-f1-smoke::after {
-            width: 6px;
-            height: 6px;
-            right: -7px;
-            top: 3px;
+        .srkr-f1-marker.is-moving .srkr-f1-smoke:nth-of-type(2) {
+            animation-delay: 400ms;
         }
 
         @keyframes srkrF1Smoke {
-
             0% {
-                opacity: .75;
-                transform:
-                    translate(-50%, 0)
-                    scale(.7);
+                opacity: .65;
+                transform: translate(-50%, 0) scale(.7);
             }
-
-            60% {
-                opacity: .42;
-            }
-
             100% {
                 opacity: 0;
-                transform:
-                    translate(
-                        -50%,
-                        14px
-                    )
-                    scale(1.45);
+                transform: translate(-50%, 16px) scale(1.7);
             }
         }
-
     `;
 
-    document.head.appendChild(
-        f1Style
-    );
+    document.head.appendChild(f1Style);
 }
 
 function createF1MarkerIcon() {
@@ -20303,22 +20133,93 @@ function createF1MarkerIcon() {
                 aria-label="Your live location"
             >
                 <span class="srkr-f1-smoke"></span>
-                <span class="srkr-f1-wheel srkr-f1-wheel-left-rear"></span>
-                <span class="srkr-f1-wheel srkr-f1-wheel-right-rear"></span>
-                <span class="srkr-f1-wheel srkr-f1-wheel-left"></span>
-                <span class="srkr-f1-wheel srkr-f1-wheel-right"></span>
-                <span class="srkr-f1-rear-wing"></span>
-                <span class="srkr-f1-car-body"></span>
-                <span class="srkr-f1-cockpit"></span>
-                <span class="srkr-f1-nose"></span>
-                <span class="srkr-f1-front-wing"></span>
+                <span class="srkr-f1-smoke"></span>
+
+                <svg
+                    class="srkr-f1-svg"
+                    viewBox="0 0 56 112"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                >
+                    <defs>
+                        <linearGradient id="srkrF1Body" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0" stop-color="#22389a"/>
+                            <stop offset=".5" stop-color="#0b1a52"/>
+                            <stop offset="1" stop-color="#22389a"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Front wing: navy plane, yellow flap, red endplates -->
+                    <path d="M3 10 H53 V15 L48 18 H8 L3 15 Z" fill="#0b1a52"/>
+                    <rect x="17" y="10" width="22" height="7" rx="1" fill="#ffc20e"/>
+                    <rect x="1.5" y="6" width="3.5" height="14" rx="1.2" fill="#e8002d"/>
+                    <rect x="51" y="6" width="3.5" height="14" rx="1.2" fill="#e8002d"/>
+
+                    <!-- Front suspension arms -->
+                    <path d="M23 31 L16 29 M33 31 L40 29 M23 38 L16 38 M33 38 L40 38"
+                          stroke="#2a2a2a" stroke-width="1.3" stroke-linecap="round"/>
+
+                    <!-- Front tyres -->
+                    <rect x="4.5" y="22" width="11.5" height="23" rx="3.2" fill="#0e0e0e"/>
+                    <rect x="40" y="22" width="11.5" height="23" rx="3.2" fill="#0e0e0e"/>
+                    <rect x="6.5" y="25" width="2" height="17" rx="1" fill="#3a3a3a"/>
+                    <rect x="47.5" y="25" width="2" height="17" rx="1" fill="#3a3a3a"/>
+                    <rect x="9" y="30" width="3.5" height="7" rx="1" fill="#e8002d"/>
+                    <rect x="43.5" y="30" width="3.5" height="7" rx="1" fill="#e8002d"/>
+
+                    <!-- Rear tyres -->
+                    <rect x="2.5" y="74" width="13.5" height="27" rx="3.6" fill="#0e0e0e"/>
+                    <rect x="40" y="74" width="13.5" height="27" rx="3.6" fill="#0e0e0e"/>
+                    <rect x="4.8" y="78" width="2.2" height="19" rx="1" fill="#3a3a3a"/>
+                    <rect x="49" y="78" width="2.2" height="19" rx="1" fill="#3a3a3a"/>
+                    <rect x="9.5" y="84" width="3.8" height="8" rx="1" fill="#e8002d"/>
+                    <rect x="42.7" y="84" width="3.8" height="8" rx="1" fill="#e8002d"/>
+                    <path d="M16 87 H21 M35 87 H40" stroke="#2a2a2a" stroke-width="2"/>
+
+                    <!-- Rear wing: navy plane, red flap, yellow endplates -->
+                    <rect x="25" y="90" width="6" height="11" fill="#222"/>
+                    <rect x="9.5" y="100" width="37" height="7" rx="1.6" fill="#0b1a52"/>
+                    <rect x="14" y="101.5" width="28" height="3.5" rx="1" fill="#e8002d"/>
+                    <rect x="8" y="96" width="3.5" height="14" rx="1.2" fill="#ffc20e"/>
+                    <rect x="44.5" y="96" width="3.5" height="14" rx="1.2" fill="#ffc20e"/>
+
+                    <!-- Nose + body + sidepods (navy) -->
+                    <path d="M24 16 Q28 5 32 16 L33.5 40 H22.5 Z" fill="url(#srkrF1Body)"/>
+                    <path d="M22.5 40 H33.5 L37 52 Q43 58 41.5 74 L38.5 91 H17.5 L14.5 74 Q13 58 19 52 Z"
+                          fill="url(#srkrF1Body)"/>
+
+                    <!-- Yellow nose tip -->
+                    <path d="M25.2 12 Q28 6 30.8 12 L31.4 17 H24.6 Z" fill="#ffc20e"/>
+
+                    <!-- Red sidepod stripes -->
+                    <path d="M16.5 66 L14.5 74 L17.5 91 H20 L18.5 74 Z" fill="#e8002d"/>
+                    <path d="M39.5 66 L41.5 74 L38.5 91 H36 L37.5 74 Z" fill="#e8002d"/>
+
+                    <!-- Centre stripe (yellow) -->
+                    <rect x="27" y="17" width="2" height="73" fill="#ffc20e" opacity=".9"/>
+
+                    <!-- Sidepod inlets -->
+                    <path d="M18.5 54 Q22 51.5 24 56 L23 63 Q19 63 17.5 59 Z" fill="#070d26"/>
+                    <path d="M37.5 54 Q34 51.5 32 56 L33 63 Q37 63 38.5 59 Z" fill="#070d26"/>
+
+                    <!-- Cockpit, helmet, halo -->
+                    <ellipse cx="28" cy="58" rx="5.6" ry="8.2" fill="#070d26"/>
+                    <circle cx="28" cy="60.5" r="3.3" fill="#ffc20e"/>
+                    <path d="M26 59.8 H30" stroke="#e8002d" stroke-width="1.2"/>
+                    <path d="M23.2 55.5 Q28 49 32.8 55.5" stroke="#9a9a9a"
+                          stroke-width="1.7" fill="none" stroke-linecap="round"/>
+                    <path d="M28 51.5 V56" stroke="#9a9a9a" stroke-width="1.4"/>
+
+                    <!-- Airbox / engine cover -->
+                    <path d="M25 67 H31 L32 90 H24 Z" fill="#e8002d"/>
+                    <rect x="27" y="68" width="2" height="20" fill="#ffc20e" opacity=".9"/>
+                </svg>
             </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        iconSize: [28, 56],
+        iconAnchor: [14, 28]
     });
 }
-
 function handleGPSUpdate(position) {
 
     const latitude =
