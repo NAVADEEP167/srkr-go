@@ -4562,7 +4562,12 @@ function renderGoFan() {
             <form id="srkrGoFanForm" class="srkr-go-fan-form">
                 <label for="srkrGoFanImage">Campus photo</label>
                 <input id="srkrGoFanImage" type="file"
-                    accept="image/jpeg,image/png,image/webp" required>
+    accept="image/jpeg,image/png,image/webp" required>
+
+<p id="srkrGoFanImageInfo"
+   class="srkr-feature-list-meta srkr-go-fan-file-info">
+    JPEG, PNG or WebP · Maximum size: 4 MB
+</p>
 
                 <div id="srkrGoFanPreviewWrap" hidden>
                     <img id="srkrGoFanPreview"
@@ -4624,6 +4629,7 @@ function renderGoFan() {
 
     const form = $("#srkrGoFanForm");
     const image = $("#srkrGoFanImage");
+    const imageInfo = $("#srkrGoFanImageInfo");
     const caption = $("#srkrGoFanCaption");
     const location = $("#srkrGoFanLocation");
     const preview = $("#srkrGoFanPreview");
@@ -4640,16 +4646,43 @@ function renderGoFan() {
     const client = typeof supabaseClient !== "undefined"
         ? supabaseClient : null;
 
-    let previewUrl = null;
-    let hostPassword = null;
-    let busy = false;
+    const MAX_GO_FAN_IMAGE_BYTES = 4 * 1024 * 1024;
+
+let previewUrl = null;
+let hostPassword = null;
+let hostVerified = false;
+let busy = false;
+
+function formatGoFanFileSize(bytes) {
+    if (
+        bytes === null ||
+        bytes === undefined ||
+        bytes === "" ||
+        !Number.isFinite(Number(bytes)) ||
+        Number(bytes) < 0
+    ) {
+        return "Not recorded";
+    }
+
+    const size = Number(bytes);
+
+    if (size >= 1024 * 1024) {
+        return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    if (size >= 1024) {
+        return `${(size / 1024).toFixed(1)} KB`;
+    }
+
+    return `${size} bytes`;
+}
 
     function validFile(file) {
-        return file &&
-            ["image/jpeg", "image/png", "image/webp"].includes(file.type) &&
-            file.size > 0 &&
-            file.size <= 5 * 1024 * 1024;
-    }
+    return file &&
+        ["image/jpeg", "image/png", "image/webp"].includes(file.type) &&
+        file.size > 0 &&
+        file.size <= MAX_GO_FAN_IMAGE_BYTES;
+}
 
     function updateSubmit() {
         submit.disabled = !client || busy ||
@@ -4675,32 +4708,47 @@ function renderGoFan() {
     }
 
     image.addEventListener("change", () => {
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        previewUrl = null;
-        preview.removeAttribute("src");
-        previewWrap.hidden = true;
+    if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+    }
 
-        const file = image.files[0];
+    previewUrl = null;
+    preview.removeAttribute("src");
+    previewWrap.hidden = true;
 
-        if (!file) {
-            updateSubmit();
-            return;
-        }
+    const file = image.files[0];
 
-        if (!validFile(file)) {
-            image.value = "";
-            status.textContent =
-                "Choose a JPEG, PNG or WebP photo up to 5 MiB.";
-            updateSubmit();
-            return;
-        }
+    if (!file) {
+        imageInfo.textContent =
+            "JPEG, PNG or WebP · Maximum size: 4 MB";
 
-        previewUrl = URL.createObjectURL(file);
-        preview.src = previewUrl;
-        previewWrap.hidden = false;
-        status.textContent = "Photo preview ready.";
         updateSubmit();
-    });
+        return;
+    }
+
+    imageInfo.textContent =
+        `Selected file size: ${formatGoFanFileSize(file.size)} · Maximum: 4 MB`;
+
+    if (!validFile(file)) {
+        const tooLarge = file.size > MAX_GO_FAN_IMAGE_BYTES;
+
+        image.value = "";
+
+        status.textContent = tooLarge
+            ? "Photo exceeds the 4 MB upload limit."
+            : "Choose a valid JPEG, PNG or WebP photo.";
+
+        updateSubmit();
+        return;
+    }
+
+    previewUrl = URL.createObjectURL(file);
+    preview.src = previewUrl;
+    previewWrap.hidden = false;
+
+    status.textContent = "Photo preview ready.";
+    updateSubmit();
+});
 
     caption.addEventListener("input", updateSubmit);
     location.addEventListener("change", updateSubmit);
@@ -4726,7 +4774,8 @@ function renderGoFan() {
             status.textContent =
                 "Submitted successfully. Waiting for host approval.";
             form.reset();
-
+            imageInfo.textContent =
+                "JPEG, PNG or WebP · Maximum size: 4 MB";
             if (previewUrl) URL.revokeObjectURL(previewUrl);
             previewUrl = null;
             preview.removeAttribute("src");
@@ -4779,7 +4828,65 @@ function renderGoFan() {
                 place.textContent = post.location_name || "";
 
                 card.append(img, text, place);
-                gallery.appendChild(card);
+                
+
+if (hostVerified && post.id !== undefined && post.id !== null) {
+
+    const remove = document.createElement("button");
+
+    remove.type = "button";
+    remove.className =
+        "srkr-feature-secondary-button srkr-go-fan-delete";
+
+    remove.textContent = "Delete permanently";
+
+    remove.addEventListener("click", async () => {
+
+        const photoName = post.caption || "this photo";
+
+        if (!window.confirm(
+            `Permanently delete "${photoName}"? This cannot be undone.`
+        )) {
+            return;
+        }
+
+        if (!hostPassword || !hostVerified) {
+            hostStatus.textContent = "Host verification required.";
+            return;
+        }
+
+        remove.disabled = true;
+        hostStatus.textContent = "Deleting approved photo...";
+
+        try {
+
+            await callFunction({
+                action: "delete",
+                password: hostPassword,
+                post_id: post.id
+            });
+
+            await loadQueue();
+            await loadGallery();
+
+            hostStatus.textContent =
+                "Approved photo permanently deleted.";
+
+        } catch (error) {
+
+            console.error("GO FAN approved photo deletion:", error);
+
+            hostStatus.textContent =
+                error.message || "Could not delete the approved photo.";
+
+            remove.disabled = false;
+        }
+    });
+
+    card.appendChild(remove);
+}
+
+gallery.appendChild(card);
             }
         } catch (error) {
             console.error("GO FAN gallery:", error);
@@ -4818,10 +4925,19 @@ function renderGoFan() {
                 }
 
                 const captionText = document.createElement("p");
-                captionText.textContent = post.caption || "";
-                const place = document.createElement("p");
-                place.textContent = post.location_name || "Campus";
-                card.append(captionText, place);
+captionText.textContent = post.caption || "";
+
+const place = document.createElement("p");
+place.textContent = post.location_name || "Campus";
+
+const fileSize = document.createElement("p");
+fileSize.className =
+    "srkr-feature-list-meta srkr-go-fan-meta";
+
+fileSize.textContent =
+    `Image size: ${formatGoFanFileSize(post.image_size_bytes)}`;
+
+card.append(captionText, place, fileSize);
 
                 async function review(decision) {
                     const buttons = card.querySelectorAll("button");
@@ -4889,27 +5005,48 @@ function renderGoFan() {
                 card.append(approve, reject, remove);
                 queue.appendChild(card);
             }
+                        return true;
         } catch (error) {
             console.error("GO FAN host queue:", error);
             hostStatus.textContent =
                 "Could not open queue. Verify host password and backend.";
+                            return false;
         }
     }
 
     unlock.addEventListener("click", async () => {
-        const password = prompt("Enter the host password:");
-        if (!password) return;
 
-        hostPassword = password;
-        unlock.disabled = true;
+    const password = window.prompt("Enter the host password:");
 
-        try {
-            await loadQueue();
-            unlock.textContent = "Refresh Host Queue";
-        } finally {
-            unlock.disabled = false;
+    if (!password) return;
+
+    hostPassword = password;
+    hostVerified = false;
+
+    unlock.disabled = true;
+
+    try {
+
+        const verified = await loadQueue();
+
+        if (!verified) {
+            hostPassword = null;
+            hostVerified = false;
+            return;
         }
-    });
+
+        hostVerified = true;
+
+        unlock.textContent = "Refresh Host Queue";
+
+        await loadGallery();
+
+    } finally {
+
+        unlock.disabled = false;
+
+    }
+});
 
     galleryFilter.addEventListener("change", loadGallery);
 

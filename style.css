@@ -2396,3 +2396,10 @@ html[data-theme="light"] body :is(
     font-size: 12px;
     line-height: 1.5;
 }
+/* GO FAN destructive host action */
+
+html body .srkr-go-fan-delete {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: transparent;
+}
