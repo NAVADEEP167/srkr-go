@@ -144,3 +144,22 @@ body.srkr-fan-popup-open{overflow:hidden}
   .srkr-feature-launcher-grid,.srkr-feature-photo-grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){.srkr-fan-destination-dialog{animation:none}}
+/* GO FAN upload metadata and host controls */
+
+.srkr-go-fan-file-info {
+    margin-top: -2px;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.srkr-go-fan-meta {
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.srkr-go-fan-delete {
+    width: 100%;
+    margin-top: 10px;
+}
